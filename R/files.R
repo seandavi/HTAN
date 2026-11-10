@@ -4,8 +4,8 @@
 #' the snapshot (the tables with `HTAN_Data_File_ID`, `Filename`,
 #' `File_Format` and `Component` columns) with the participants and
 #' biospecimens from `id_provenance` and the CRDC General Commons DRS URI
-#' from `gc_drs_map`. The result is lazy: filter it with dplyr, then pass it
-#' to [htan_download()].
+#' from `gc_drs_map`. The result is lazy: filter it with [dplyr::filter()],
+#' then pass it to [htan_download()].
 #'
 #' Columns:
 #' \describe{
@@ -23,8 +23,9 @@
 #'     `.h5ad`, `.rds`, `.csv`, `.tsv.gz`.}
 #'   \item{HTAN_Participant_ID, HTAN_Assayed_Biospecimen_ID}{From
 #'     `id_provenance`. A file derived from several participants (about 1.6
-#'     percent of files in r7) lists them comma-separated; use the
-#'     `participants` argument, which handles that case, rather than `==`.}
+#'     percent of files in r7) lists them comma-separated, so `==` misses
+#'     it: to select files by participant, join [htan_file_participants()]
+#'     instead.}
 #'   \item{n_participants}{Number of distinct participants.}
 #'   \item{drs_uri}{CRDC General Commons DRS ID, if the file is there.}
 #'   \item{access}{Where the file can be fetched: `"open-gc"` (open Level 2
@@ -33,34 +34,55 @@
 #'     sequencing; dbGaP phs002371, not supported).}
 #' }
 #'
-#' @param ... Filter conditions passed to [dplyr::filter()], e.g.
-#'     `assay == "ScRNA-seq", level == 4`.
-#' @param participants `character()` or `NULL`. Keep files derived from any
-#'     of these `HTAN_Participant_ID`s, including multi-participant files.
 #' @inheritParams htan_tables
 #'
-#' @return A lazy `tbl_duckdb_connection`.
+#' @return A lazy `tbl_duckdb_connection`, one row per file.
+#'
+#' @seealso [htan_file_participants()] to select files by participant.
 #'
 #' @examples
 #' fixture <- system.file("extdata", "snapshot", package = "HTAN")
 #' con <- htan_con("r7", base_url = fixture)
-#' htan_files(con = con)
-#' htan_files(level == 4, extension == ".h5ad", con = con)
-#' htan_files(participants = "HTA12_15", access == "open-gc", con = con)
+#' htan_files(con)
+#' htan_files(con) |>
+#'     dplyr::filter(level == 4, extension == ".h5ad")
 #'
 #' @export
-htan_files <- function(..., participants = NULL, con = htan_con()) {
-    files <- dplyr::tbl(con, dbplyr::sql(.files_sql(con)))
-    if (!is.null(participants)) {
-        if (!is.character(participants)) {
-            rlang::abort("`participants` must be a character vector.",
-                class = c("htan_error_bad_argument", "htan_error"))
-        }
-        prov <- dplyr::filter(htan_tbl("id_provenance", con),
-            .data$HTAN_Participant_ID %in% !!participants)
-        files <- dplyr::semi_join(files, prov, by = "HTAN_Data_File_ID")
-    }
-    dplyr::filter(files, ...)
+htan_files <- function(con = htan_con()) {
+    dplyr::tbl(con, dbplyr::sql(.files_sql(con)))
+}
+
+#' Link HTAN files to participants
+#'
+#' One row per file and participant, from `id_provenance`. A file derived
+#' from several participants (pooled samples, about 1.6 percent of files in
+#' r7) has one row for each, so filtering this table by
+#' `HTAN_Participant_ID` finds every file a participant contributed to.
+#' Join it to [htan_files()] with [dplyr::semi_join()] to select files, or
+#' count over it to summarise files per participant.
+#'
+#' @inheritParams htan_tables
+#'
+#' @return A lazy `tbl_duckdb_connection` with columns `HTAN_Data_File_ID`
+#'     and `HTAN_Participant_ID`, one row per pair.
+#'
+#' @seealso [htan_files()]
+#'
+#' @examples
+#' fixture <- system.file("extdata", "snapshot", package = "HTAN")
+#' con <- htan_con("r7", base_url = fixture)
+#' hta12_15 <- htan_file_participants(con) |>
+#'     dplyr::filter(HTAN_Participant_ID == "HTA12_15")
+#' htan_files(con) |>
+#'     dplyr::semi_join(hta12_15, by = "HTAN_Data_File_ID")
+#'
+#' @export
+htan_file_participants <- function(con = htan_con()) {
+    htan_tbl("id_provenance", con) |>
+        dplyr::filter(!is.na(.data$HTAN_Participant_ID)) |>
+        dplyr::select(dplyr::all_of(c("HTAN_Data_File_ID",
+            "HTAN_Participant_ID"))) |>
+        dplyr::distinct()
 }
 
 ## Columns every file table contributes; missing ones become typed NULLs.

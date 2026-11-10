@@ -1,7 +1,7 @@
 test_that("htan_lineage() walks from processed files to their sources", {
     local_fixture_snapshot()
-    l4 <- htan_files(assay == "ScRNA-seq", level == 4,
-        participants = "HTA12_251")
+    l4 <- participant_files("HTA12_251") |>
+        dplyr::filter(assay == "ScRNA-seq", level == 4)
     up <- dplyr::collect(htan_lineage(l4))
     ids <- dplyr::pull(l4, HTAN_Data_File_ID)
     expect_setequal(unique(up$HTAN_Data_File_ID), ids)
@@ -12,8 +12,10 @@ test_that("htan_lineage() walks from processed files to their sources", {
 
 test_that("descendants invert ancestors", {
     local_fixture_snapshot()
-    l4 <- dplyr::pull(htan_files(assay == "ScRNA-seq", level == 4,
-        participants = "HTA12_251"), HTAN_Data_File_ID)[1]
+    l4 <- participant_files("HTA12_251") |>
+        dplyr::filter(assay == "ScRNA-seq", level == 4) |>
+        utils::head(1L) |>
+        dplyr::pull(HTAN_Data_File_ID)
     up <- dplyr::collect(htan_lineage(l4))
     root <- up$related_file_id[up$depth == min(up$depth)][1]
     down <- dplyr::collect(htan_lineage(root, direction = "descendants"))

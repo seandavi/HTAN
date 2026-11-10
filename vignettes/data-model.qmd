@@ -156,7 +156,7 @@ with the model's own description from the `schema` table:
 #| label: components
 #| echo: false
 key <- function(x) tolower(gsub("[^A-Za-z0-9]", "", x))
-comp <- htan_files(con = con) |>
+comp <- htan_files(con) |>
     count(Component, assay, level) |>
     collect()
 schema |>
@@ -214,7 +214,7 @@ against the `HTAN_Center` column:
 
 ```{r}
 #| label: prefix-center
-htan_files(con = con) |>
+htan_files(con) |>
     mutate(prefix = regexp_extract(HTAN_Data_File_ID, "^HTA[0-9]+")) |>
     count(prefix, HTAN_Center) |>
     arrange(as.integer(substr(prefix, 4L, 6L))) |>
@@ -238,7 +238,7 @@ enough to matter:
 
 ```{r}
 #| label: prefix-vs-participant
-f <- htan_files(con = con) |>
+f <- htan_files(con) |>
     select(HTAN_Data_File_ID, HTAN_Participant_ID, n_participants) |>
     collect() |>
     mutate(id_participant = sub("^(HTA[0-9]+_[0-9]+).*$", "\\1",
@@ -427,7 +427,8 @@ Start with a Level 4 Visium object from the Vanderbilt colorectal atlas:
 ```{r}
 #| label: visium-file
 visium_id <- "HTA11_7862_200000101134111"
-htan_files(HTAN_Data_File_ID == visium_id, con = con) |>
+htan_files(con) |>
+    dplyr::filter(HTAN_Data_File_ID == visium_id) |>
     select(Component, Filename, File_Size, HTAN_Participant_ID,
         HTAN_Assayed_Biospecimen_ID, access) |>
     collect() |>
@@ -570,7 +571,8 @@ participant, but `id_provenance` attributes it to four:
 ```{r}
 #| label: pooled
 pooled_id <- "HTA5_0000_1003255"
-htan_files(HTAN_Data_File_ID == pooled_id, con = con) |>
+htan_files(con) |>
+    dplyr::filter(HTAN_Data_File_ID == pooled_id) |>
     select(Filename, n_participants, HTAN_Participant_ID) |>
     collect() |>
     glimpse()
@@ -599,9 +601,10 @@ most likely to give silently wrong answers.
 `Biospecimen_Path` in `id_provenance` and `Adjacent_Biospecimen_IDs` in
 `biospecimen` hold comma-separated lists. In `htan_files()`,
 `HTAN_Participant_ID` and `HTAN_Assayed_Biospecimen_ID` are comma-separated
-for multi-participant files. Never compare these fields with `==`. Use
-`id_provenance` or the `participants` argument of `htan_files()`, or
-split them first.
+for multi-participant files. Never compare these fields with `==`. To
+select files by participant, use `htan_file_participants()`, which has one
+row per file and participant, or `id_provenance`; split the other lists
+first.
 
 **Several parents, several participants.** A file can have many parents
 and many participants (see the multiplicity table above), so joining
@@ -684,7 +687,8 @@ and therefore no participant. By component:
 
 ```{r}
 #| label: no-provenance
-htan_files(n_participants == 0, con = con) |>
+htan_files(con) |>
+    dplyr::filter(n_participants == 0) |>
     count(Component) |>
     arrange(desc(n)) |>
     collect()

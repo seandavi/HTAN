@@ -50,8 +50,8 @@
 #' fixture <- system.file("extdata", "snapshot", package = "HTAN")
 #' con <- htan_con("r7", base_url = fixture)
 #' ## a 250 KB open IMC image, fetched anonymously from General Commons
-#' tiff <- htan_files(drs_uri == "dg.4DFC/6231a7d4-7e68-11ee-b51d-e7db3b9207b8",
-#'     con = con)
+#' tiff <- htan_files(con) |>
+#'     dplyr::filter(drs_uri == "dg.4DFC/6231a7d4-7e68-11ee-b51d-e7db3b9207b8")
 #' \donttest{
 #' dl <- htan_download(tiff, con = con)
 #' dl$status
@@ -161,8 +161,9 @@ htan_download <- function(
 .download_plan <- function(files, con) {
     if (is.character(files)) {
         ids <- unique(files)
-        plan <- dplyr::collect(dplyr::filter(htan_files(con = con),
-            .data$HTAN_Data_File_ID %in% !!ids))
+        plan <- htan_files(con) |>
+            dplyr::filter(.data$HTAN_Data_File_ID %in% !!ids) |>
+            dplyr::collect()
         missing <- setdiff(ids, plan$HTAN_Data_File_ID)
         if (length(missing)) {
             rlang::abort(

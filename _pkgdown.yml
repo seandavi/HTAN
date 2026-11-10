@@ -56,6 +56,7 @@ reference:
   contents:
   - htan_tables
   - htan_files
+  - htan_file_participants
   - htan_lineage
 - title: Download and read files
   contents:

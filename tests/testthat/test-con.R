@@ -171,7 +171,9 @@ test_that("live: the Hugging Face r7 snapshot matches its manifest", {
     expect_identical(info$release, "r7")
     expect_null(info$fixture)
     expect_equal(nrow(htan_tables(con)), 78L)
-    n <- dplyr::pull(dplyr::count(htan_files(con = con)))
+    n <- htan_files(con) |>
+        dplyr::count() |>
+        dplyr::pull()
     expect_equal(n, 221688)
 })
 

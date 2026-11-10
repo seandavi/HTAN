@@ -6,6 +6,13 @@
   `Seurat::as.SingleCellExperiment()` in place of the package's own
   converter. Seurat is now in Suggests; reading a Seurat object without it
   installed is an error that says how to install it (#44).
+* Breaking: `htan_files()` takes only `con`. Filter its result with
+  `dplyr::filter()` instead of passing conditions to it, and select files by
+  participant with the new `htan_file_participants()`, one row per file and
+  participant, joined with `dplyr::semi_join()`. This replaces the
+  `participants` argument and, unlike `==` on the comma-separated
+  `HTAN_Participant_ID` column, finds files pooled from several
+  participants. `htan_files()` stays one row per file (#45).
 
 # HTAN 0.99.1
 

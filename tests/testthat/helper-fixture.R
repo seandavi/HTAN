@@ -21,3 +21,11 @@ skip_if_no_integration <- function() {
         testthat::skip("set HTAN_INTEGRATION=true to run live tests")
     }
 }
+
+## Files a participant contributed to, including pooled files.
+participant_files <- function(id, con = htan_con()) {
+    owned <- htan_file_participants(con) |>
+        dplyr::filter(HTAN_Participant_ID == !!id)
+    htan_files(con) |>
+        dplyr::semi_join(owned, by = "HTAN_Data_File_ID")
+}

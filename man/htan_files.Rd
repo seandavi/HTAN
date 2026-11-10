@@ -4,27 +4,21 @@
 \alias{htan_files}
 \title{Find HTAN files}
 \usage{
-htan_files(..., participants = NULL, con = htan_con())
+htan_files(con = htan_con())
 }
 \arguments{
-\item{...}{Filter conditions passed to \code{\link[dplyr:filter]{dplyr::filter()}}, e.g.
-\verb{assay == "ScRNA-seq", level == 4}.}
-
-\item{participants}{\code{character()} or \code{NULL}. Keep files derived from any
-of these \code{HTAN_Participant_ID}s, including multi-participant files.}
-
 \item{con}{A connection from \code{\link[=htan_con]{htan_con()}}.}
 }
 \value{
-A lazy \code{tbl_duckdb_connection}.
+A lazy \code{tbl_duckdb_connection}, one row per file.
 }
 \description{
 One row per HTAN data file, combining every file-level metadata table in
 the snapshot (the tables with \code{HTAN_Data_File_ID}, \code{Filename},
 \code{File_Format} and \code{Component} columns) with the participants and
 biospecimens from \code{id_provenance} and the CRDC General Commons DRS URI
-from \code{gc_drs_map}. The result is lazy: filter it with dplyr, then pass it
-to \code{\link[=htan_download]{htan_download()}}.
+from \code{gc_drs_map}. The result is lazy: filter it with \code{\link[dplyr:filter]{dplyr::filter()}},
+then pass it to \code{\link[=htan_download]{htan_download()}}.
 }
 \details{
 Columns:
@@ -43,8 +37,9 @@ r7, 260 mass-spectrometry files are also in the legacy r2_v2
 \code{.h5ad}, \code{.rds}, \code{.csv}, \code{.tsv.gz}.}
 \item{HTAN_Participant_ID, HTAN_Assayed_Biospecimen_ID}{From
 \code{id_provenance}. A file derived from several participants (about 1.6
-percent of files in r7) lists them comma-separated; use the
-\code{participants} argument, which handles that case, rather than \code{==}.}
+percent of files in r7) lists them comma-separated, so \code{==} misses
+it: to select files by participant, join \code{\link[=htan_file_participants]{htan_file_participants()}}
+instead.}
 \item{n_participants}{Number of distinct participants.}
 \item{drs_uri}{CRDC General Commons DRS ID, if the file is there.}
 \item{access}{Where the file can be fetched: \code{"open-gc"} (open Level 2
@@ -56,8 +51,11 @@ sequencing; dbGaP phs002371, not supported).}
 \examples{
 fixture <- system.file("extdata", "snapshot", package = "HTAN")
 con <- htan_con("r7", base_url = fixture)
-htan_files(con = con)
-htan_files(level == 4, extension == ".h5ad", con = con)
-htan_files(participants = "HTA12_15", access == "open-gc", con = con)
+htan_files(con)
+htan_files(con) |>
+    dplyr::filter(level == 4, extension == ".h5ad")
 
+}
+\seealso{
+\code{\link[=htan_file_participants]{htan_file_participants()}} to select files by participant.
 }

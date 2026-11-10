@@ -28,8 +28,13 @@
 #' @examples
 #' fixture <- system.file("extdata", "snapshot", package = "HTAN")
 #' con <- htan_con("r7", base_url = fixture)
-#' f <- dplyr::pull(htan_files(level == 4, participants = "HTA12_251",
-#'     con = con), HTAN_Data_File_ID)[1]
+#' hta12_251 <- htan_file_participants(con) |>
+#'     dplyr::filter(HTAN_Participant_ID == "HTA12_251")
+#' f <- htan_files(con) |>
+#'     dplyr::filter(level == 4) |>
+#'     dplyr::semi_join(hta12_251, by = "HTAN_Data_File_ID") |>
+#'     utils::head(1L) |>
+#'     dplyr::pull(HTAN_Data_File_ID)
 #' se <- SummarizedExperiment::SummarizedExperiment(
 #'     list(counts = matrix(1:6, 2, dimnames = list(c("g1", "g2"),
 #'         c("c1", "c2", "c3")))))

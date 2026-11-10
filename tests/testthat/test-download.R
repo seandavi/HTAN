@@ -8,7 +8,9 @@ md5_raw <- function(x) {
 
 ## Fixture rows with their md5 replaced by that of the mocked content.
 mock_files <- function(..., body = charToRaw("pixels")) {
-    files <- dplyr::collect(htan_files(...))
+    files <- htan_files() |>
+        dplyr::filter(...) |>
+        dplyr::collect()
     files$md5 <- md5_raw(body)
     files
 }
@@ -211,7 +213,8 @@ test_that("Synapse needs a token, and auth failures are classed", {
 
 test_that("controlled files are refused before any request", {
     local_fixture_snapshot()
-    files <- dplyr::filter(htan_files(), access == "controlled")
+    files <- htan_files() |>
+        dplyr::filter(access == "controlled")
     log <- new.env()
     httr2::with_mocked_responses(mock_services(log), {
         expect_error(htan_download(files, dest = withr::local_tempdir()),
@@ -239,7 +242,8 @@ test_that("a checksum mismatch leaves nothing behind", {
 
 test_that("size guard, ID lookup and path safety", {
     local_fixture_snapshot()
-    files <- htan_files(drs_uri == !!tiff_drs)
+    files <- htan_files() |>
+        dplyr::filter(drs_uri == !!tiff_drs)
     expect_error(htan_download(files, dest = withr::local_tempdir(),
         max_bytes = 10), class = "htan_error_too_large")
     expect_error(htan_download("HTA0_0_0", dest = withr::local_tempdir()),
@@ -255,7 +259,9 @@ test_that("size guard, ID lookup and path safety", {
 test_that("live: anonymous DRS download of an open IMC image", {
     skip_if_no_integration()
     local_fixture_snapshot()
-    files <- dplyr::collect(htan_files(drs_uri == !!tiff_drs))
+    files <- htan_files() |>
+        dplyr::filter(drs_uri == !!tiff_drs) |>
+        dplyr::collect()
     out <- htan_download(files)
     expect_identical(out$status, "downloaded")
     expect_identical(unname(tools::md5sum(out$path)), files$md5)
@@ -268,8 +274,9 @@ test_that("live: Synapse download with SYNAPSE_AUTH_TOKEN", {
     skip_if(!nzchar(Sys.getenv("SYNAPSE_AUTH_TOKEN")),
         "SYNAPSE_AUTH_TOKEN not set")
     local_fixture_snapshot()
-    files <- dplyr::collect(htan_files(access == "open-synapse",
-        File_Size < 1e6))
+    files <- htan_files() |>
+        dplyr::filter(access == "open-synapse", File_Size < 1e6) |>
+        dplyr::collect()
     out <- htan_download(files[1, ], dest = withr::local_tempdir())
     expect_identical(unname(tools::md5sum(out$path)), files$md5[1])
 })

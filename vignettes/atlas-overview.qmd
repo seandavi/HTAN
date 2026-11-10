@@ -69,9 +69,9 @@ tier_colours <- c(`open-synapse` = "#2a78d6", `open-gc` = "#eb6834",
 # Building the working tables
 
 Most of what follows works from three tables. `files` has one row per file
-from `htan_files()`, plus a coarse *modality*. `file_participants` links
-files to participants through `id_provenance`, one row per file and
-participant, so a pooled file counts once for every participant in it.
+from `htan_files()`, plus a coarse *modality*. `file_participants` comes
+from `htan_file_participants()`, one row per file and participant, so a
+pooled file counts once for every participant in it.
 `imaging_types` gives the imaging technology of each Level 2 image. We need
 it because `Component` does not record the technology: every multiplexed
 image, H&E slide and MERFISH run is `ImagingLevel2`.
@@ -99,15 +99,14 @@ modality_of <- function(assay, imaging_type) {
     )
 }
 
-files <- htan_files(con = con) |>
+files <- htan_files(con) |>
     select(HTAN_Data_File_ID, HTAN_Center, Component, assay, level,
         extension, File_Size, access, n_participants) |>
     collect() |>
     left_join(imaging_types, by = "HTAN_Data_File_ID") |>
     mutate(modality = modality_of(assay, Imaging_Assay_Type))
 
-file_participants <- htan_tbl("id_provenance", con) |>
-    distinct(HTAN_Data_File_ID, HTAN_Participant_ID) |>
+file_participants <- htan_file_participants(con) |>
     collect() |>
     inner_join(select(files, HTAN_Data_File_ID, HTAN_Center, assay, level,
         modality, Imaging_Assay_Type), by = "HTAN_Data_File_ID")

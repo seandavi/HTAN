@@ -8,8 +8,9 @@ toy_se <- function(cols, extra = NULL) {
 
 test_that("single-participant files map every column to the participant", {
     local_fixture_snapshot()
-    ids <- dplyr::pull(htan_files(level == 4, participants = "HTA12_251",
-        n_participants == 1), HTAN_Data_File_ID)
+    ids <- participant_files("HTA12_251") |>
+        dplyr::filter(level == 4, n_participants == 1) |>
+        dplyr::pull(HTAN_Data_File_ID)
     expect_gte(length(ids), 2L)
     x <- stats::setNames(list(toy_se(c("a", "b")), toy_se("c")), ids[1:2])
     mae <- htan_experiment(x)
@@ -24,8 +25,10 @@ test_that("single-participant files map every column to the participant", {
 
 test_that("multi-participant files need a participant column", {
     local_fixture_snapshot()
-    f <- dplyr::collect(htan_files(extension == ".h5ad",
-        Filename %like% "%HTA5_1470_T.h5ad"))
+    f <- htan_files() |>
+        dplyr::filter(extension == ".h5ad",
+            Filename %like% "%HTA5_1470_T.h5ad") |>
+        dplyr::collect()
     owners <- strsplit(f$HTAN_Participant_ID, ",")[[1]]
     expect_length(owners, 4L)
     cells <- paste0("cell", 1:4)
