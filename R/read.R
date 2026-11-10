@@ -14,8 +14,8 @@
 #'   \item{`.rds`, `.rda`, `.RData`}{Read, then: `SingleCellExperiment` and
 #'     other `SummarizedExperiment`s pass through; a Seurat object is
 #'     converted with `Seurat::as.SingleCellExperiment()` (assays, metadata
-#'     and reductions), plus tissue coordinates when present. Anything else is returned as is,
-#'     with a message.}
+#'     and reductions), plus tissue coordinates when present. Anything
+#'     else is returned as is, with a message.}
 #'   \item{`.h5` (10x)}{`TENxIO::TENxH5()` to a `SingleCellExperiment`.}
 #'   \item{a Space Ranger `outs/` directory}{`VisiumIO::TENxVisium()` to a
 #'     `SpatialExperiment`.}
