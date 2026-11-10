@@ -24,7 +24,6 @@ vignette: >
 #| label: setup
 #| include: false
 library(HTAN)
-library(dplyr)
 fmt <- function(x) format(x, big.mark = ",", scientific = FALSE)
 ```
 
@@ -105,13 +104,14 @@ BiocManager::install("seandavi/HTAN")
 
 # Getting started
 
-Load the package and dplyr, which is the query language for everything
-that follows:
+Load the package. Queries are written with dplyr, which is the query
+language for everything that follows; we call its functions with the
+`dplyr::` prefix rather than attaching it, so it is always clear which
+package a function comes from:
 
 ```{r}
 #| label: load
 library(HTAN)
-library(dplyr)
 ```
 
 Open a connection to the Release 7 metadata snapshot. The first call
@@ -132,9 +132,9 @@ RNA-seq Level 4 files by center and file extension:
 #| label: first-query
 htan_files(con) |>
     dplyr::filter(assay == "ScRNA-seq", level == 4) |>
-    count(HTAN_Center, extension) |>
-    arrange(desc(n)) |>
-    collect()
+    dplyr::count(HTAN_Center, extension) |>
+    dplyr::arrange(dplyr::desc(n)) |>
+    dplyr::collect()
 ```
 
 `htan_lineage()` traces a processed file back to the raw files and the
@@ -151,9 +151,9 @@ htan_files(con) |>
     dplyr::semi_join(hta12_251, by = "HTAN_Data_File_ID") |>
     head(1) |>
     htan_lineage(con = con) |>
-    select(related_file_id, depth, Component, HTAN_Assayed_Biospecimen_ID) |>
-    arrange(depth) |>
-    collect()
+    dplyr::select(related_file_id, depth, Component, HTAN_Assayed_Biospecimen_ID) |>
+    dplyr::arrange(depth) |>
+    dplyr::collect()
 ```
 
 The last two steps are downloading a file and reading it. Level 2 images
@@ -410,7 +410,7 @@ metadata tables (one or more per assay and level, plus `id_provenance`,
 ```{r}
 #| label: table-groups
 htan_tables(con) |>
-    count(category)
+    dplyr::count(category)
 ```
 
 A few tables were not refreshed in Release 7, so the snapshot takes them
@@ -419,8 +419,8 @@ from the last release that had them:
 ```{r}
 #| label: old-tables
 htan_tables(con) |>
-    filter(source_version != "r7") |>
-    select(name, source_version, rows)
+    dplyr::filter(source_version != "r7") |>
+    dplyr::select(name, source_version, rows)
 ```
 
 ## How it relates to the authoritative sources
@@ -469,8 +469,8 @@ in the demographics table, with the counting done in DuckDB:
 ```{r}
 #| label: demographics
 htan_tbl("clinical_tier1_demographics", con) |>
-    count(Gender, sort = TRUE) |>
-    collect()
+    dplyr::count(Gender, sort = TRUE) |>
+    dplyr::collect()
 ```
 
 Note the same value spelled several ways. Centers submitted their own
@@ -480,9 +480,9 @@ before you count or join on them:
 ```{r}
 #| label: demographics-clean
 htan_tbl("clinical_tier1_demographics", con) |>
-    mutate(Gender = tolower(Gender)) |>
-    count(Gender, sort = TRUE) |>
-    collect()
+    dplyr::mutate(Gender = tolower(Gender)) |>
+    dplyr::count(Gender, sort = TRUE) |>
+    dplyr::collect()
 ```
 
 `htan_columns()` returns the column descriptions recorded in the BigQuery
@@ -491,7 +491,7 @@ schema. It is the quickest way to learn what a field means:
 ```{r}
 #| label: columns
 htan_columns("id_provenance", con) |>
-    select(column, description)
+    dplyr::select(column, description)
 ```
 
 ## Files
@@ -507,12 +507,12 @@ by tier:
 #| label: files
 files <- htan_files(con)
 files |>
-    count(access) |>
-    arrange(desc(n)) |>
-    collect()
+    dplyr::count(access) |>
+    dplyr::arrange(dplyr::desc(n)) |>
+    dplyr::collect()
 ```
 
-There are `r fmt(pull(count(files)))` files in Release 7. The tiers are:
+There are `r fmt(dplyr::pull(dplyr::count(files)))` files in Release 7. The tiers are:
 
 - `open-gc`: open Level 2 images in the General Commons, downloadable
   anonymously;
@@ -529,9 +529,9 @@ Level 4 file in AnnData format:
 #| label: files-h5ad
 files |>
     dplyr::filter(assay == "ScRNA-seq", level == 4, extension == ".h5ad") |>
-    select(HTAN_Data_File_ID, HTAN_Center, File_Size, n_participants) |>
-    arrange(File_Size) |>
-    collect()
+    dplyr::select(HTAN_Data_File_ID, HTAN_Center, File_Size, n_participants) |>
+    dplyr::arrange(File_Size) |>
+    dplyr::collect()
 ```
 
 Some files, such as merged single-cell objects, come from several
@@ -546,9 +546,9 @@ hta11_7862 <- htan_file_participants(con) |>
     dplyr::filter(HTAN_Participant_ID == "HTA11_7862")
 files |>
     dplyr::semi_join(hta11_7862, by = "HTAN_Data_File_ID") |>
-    count(Component, access) |>
-    arrange(Component) |>
-    collect()
+    dplyr::count(Component, access) |>
+    dplyr::arrange(Component) |>
+    dplyr::collect()
 ```
 
 This one participant, from the Vanderbilt colorectal atlas, has Visium
@@ -565,10 +565,10 @@ ancestors:
 ```{r}
 #| label: lineage
 htan_lineage("HTA11_7862_200000101134111", con = con) |>
-    select(related_file_id, depth, Filename) |>
-    arrange(depth, related_file_id) |>
-    collect() |>
-    mutate(Filename = basename(Filename))
+    dplyr::select(related_file_id, depth, Filename) |>
+    dplyr::arrange(depth, related_file_id) |>
+    dplyr::collect() |>
+    dplyr::mutate(Filename = basename(Filename))
 ```
 
 The Level 4 Visium object was computed from four Level 3 Space Ranger
@@ -587,8 +587,8 @@ download anonymously; this one is a 250 KB imaging mass cytometry image:
 tiff <- htan_files(con) |>
     dplyr::filter(drs_uri == "dg.4DFC/6231a7d4-7e68-11ee-b51d-e7db3b9207b8")
 tiff |>
-    select(HTAN_Data_File_ID, Component, File_Size, access) |>
-    collect()
+    dplyr::select(HTAN_Data_File_ID, Component, File_Size, access) |>
+    dplyr::collect()
 dl <- htan_download(tiff, con = con)
 dl$status
 read_htan(dl) |> basename()
@@ -629,7 +629,7 @@ Controlled files are refused with a classed error:
 #| label: download-controlled
 fastq <- htan_files(con) |>
     dplyr::filter(access == "controlled") |>
-    arrange(HTAN_Data_File_ID) |>
+    dplyr::arrange(HTAN_Data_File_ID) |>
     head(1)
 tryCatch(
     htan_download(fastq, con = con),
