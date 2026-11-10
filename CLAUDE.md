@@ -124,10 +124,10 @@ release to the Hugging Face dataset (upload, then tag) is a manual step
 - Branches and PRs into `devel` (the Bioconductor-style default branch).
 - Small commits; NEWS.md entry for user-visible changes.
 - Style (details and examples in CONTRIBUTING.md, "Style"):
-  - Air formats all R code (`air.toml`: 4-space indent, 80 columns). Run
-    `just format` before committing; the pre-commit hook (`just hooks`) and
-    CI run `air format . --check`. Air skips `.qmd` chunks: format those by
-    hand to match.
+  - Air formats all R code (`air.toml`: 4-space indent, 80 columns),
+    including vignette chunks via `dev/air-qmd.R`. Run `just format` before
+    committing; the pre-commit hook (`just hooks`) and CI run
+    `just format-check`'s two commands. `# fmt: skip` keeps a hand layout.
   - Chains of steps on one object (dplyr verbs, httr2 requests) are `|>`
     pipelines, one step per line. No nested dplyr calls, no `%>%`, no
     `x <- f(x); x <- g(x)`. Reassignment only for argument normalization,

@@ -33,3 +33,4 @@
 ^.*\.BiocCheck$
 ^air\.toml$
 ^\.githooks$
+^dev$

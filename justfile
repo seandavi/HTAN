@@ -17,10 +17,12 @@ document:
 # Format R code with Air (air.toml)
 format:
     air format .
+    Rscript dev/air-qmd.R vignettes/*.qmd
 
 # Check formatting without changing files (what CI and the hook run)
 format-check:
     air format . --check
+    Rscript dev/air-qmd.R --check vignettes/*.qmd
 
 # Use the repo's git hooks (.githooks/pre-commit runs Air on staged R files)
 hooks:

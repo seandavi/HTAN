@@ -1,20 +1,34 @@
 #!/bin/sh
-# Refuse a commit whose staged R files are not Air-formatted, so CI's
-# `air format --check` never fails on something caught here. Install with
-# `just hooks`. Checks the working-tree copy of each staged file. POSIX sh,
-# so it runs with macOS's old /bin/bash too.
+# Refuse a commit whose staged R files or Quarto R chunks are not
+# Air-formatted, so CI's format check never fails on something caught
+# here. Install with `just hooks`. Checks the working-tree copy of each
+# staged file. POSIX sh, so it runs with macOS's old /bin/bash too.
 set -eu
 
-files=$(git diff --cached --name-only --diff-filter=ACMR -- '*.R')
-[ -n "$files" ] || exit 0
+staged() {
+    git diff --cached --name-only --diff-filter=ACMR -- "$1"
+}
+r=$(staged '*.R')
+qmd=$(staged '*.qmd')
+[ -n "$r$qmd" ] || exit 0
+
 if ! command -v air >/dev/null 2>&1; then
     echo "pre-commit: air is not installed." >&2
     echo "  See https://posit-dev.github.io/air/cli.html (brew install air)." >&2
     exit 1
 fi
-# Word splitting is intended: R file names in this repo have no spaces.
-# shellcheck disable=SC2086
-if ! air format --check $files; then
+
+# Word splitting is intended: file names in this repo have no spaces.
+status=0
+if [ -n "$r" ]; then
+    # shellcheck disable=SC2086
+    air format --check $r || status=1
+fi
+if [ -n "$qmd" ]; then
+    # shellcheck disable=SC2086
+    Rscript dev/air-qmd.R --check $qmd || status=1
+fi
+if [ "$status" -ne 0 ]; then
     echo "pre-commit: run 'just format', then stage the changes." >&2
     exit 1
 fi

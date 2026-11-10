@@ -125,12 +125,14 @@ and adds a few rules of its own, so the same idea is written the same way
 everywhere.
 
 **Layout is Air's job.** [Air](https://posit-dev.github.io/air/) formats
-all R code with the settings in `air.toml` (4-space indent, 80 columns).
-Do not hand-format, and do not fight the formatter. Run `just format`
-before committing. The pre-commit hook (`just hooks`) refuses a commit whose
-staged R files are not formatted, and CI runs `air format . --check`. Air
-does not format code chunks in `vignettes/*.qmd`; write those the same way
-by hand.
+all R code with the settings in `air.toml` (4-space indent, 80 columns):
+the `.R` files, and the R chunks of the vignettes through `dev/air-qmd.R`
+(Air itself reads only `.R` files). Do not hand-format, and do not fight
+the formatter. Run `just format` before committing. The pre-commit hook
+(`just hooks`) refuses a commit whose staged R files or vignettes are not
+formatted, and CI runs the same check (`just format-check`). Air does not
+split long strings; where a hand layout reads better, as in a table of
+long labels, put `# fmt: skip` on the line above the expression.
 
 **Chains use the native pipe.** A sequence of steps on one object, such as
 dplyr verbs or an httr2 request, is a `|>` pipeline with one step per line:
