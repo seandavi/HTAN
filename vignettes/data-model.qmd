@@ -25,8 +25,9 @@ vignette: >
 #| include: false
 library(HTAN)
 fmt <- function(x) format(x, big.mark = ",", scientific = FALSE)
-pct <- function(x, digits = 1) paste0(format(round(100 * x, digits),
-    nsmall = digits), "%")
+pct <- function(x, digits = 1) {
+    paste0(format(round(100 * x, digits), nsmall = digits), "%")
+}
 ```
 
 Package: [*HTAN*](https://bioconductor.org/packages/HTAN)
@@ -101,11 +102,12 @@ Row counts are for Release 7:
 ```{r}
 #| label: table-list
 #| echo: false
+# fmt: skip
 desc <- c(
     clinical_tier1_demographics =
         "Sex, race, ethnicity, vital status; one row per participant",
     clinical_tier1_diagnosis =
-        "Primary diagnosis, site, stage, grade; one or more rows per participant",
+        "Primary diagnosis, site, stage, grade; one or more per participant",
     clinical_tier1_therapy = "Treatments, with days from index",
     clinical_tier1_followup = "Follow-up visits, progression, comorbidities",
     clinical_tier1_exposure = "Smoking, alcohol and other exposures",
@@ -198,13 +200,16 @@ parse_htan_id <- function(id) {
     tibble::tibble(
         id = id,
         center = vapply(m, `[`, "", 2L),
-        participant = vapply(m, function(x) paste(x[2:3], collapse = "_"),
-            ""),
+        participant = vapply(m, function(x) paste(x[2:3], collapse = "_"), ""),
         rest = vapply(m, `[`, "", 4L)
     )
 }
-parse_htan_id(c("HTA11_7862", "HTA11_7862_2000001011",
-    "HTA11_7862_200000101134111", "HTA5_0000_1003255"))
+parse_htan_id(c(
+    "HTA11_7862",
+    "HTA11_7862_2000001011",
+    "HTA11_7862_200000101134111",
+    "HTA5_0000_1003255"
+))
 ```
 
 The prefix names the center that submitted the data. You can check that
@@ -239,8 +244,9 @@ enough to matter:
 f <- htan_files(con) |>
     dplyr::select(HTAN_Data_File_ID, HTAN_Participant_ID, n_participants) |>
     dplyr::collect() |>
-    dplyr::mutate(id_participant = sub("^(HTA[0-9]+_[0-9]+).*$", "\\1",
-        HTAN_Data_File_ID))
+    dplyr::mutate(
+        id_participant = sub("^(HTA[0-9]+_[0-9]+).*$", "\\1", HTAN_Data_File_ID)
+    )
 single <- dplyr::filter(f, n_participants == 1)
 mismatch <- dplyr::filter(single, id_participant != HTAN_Participant_ID)
 nrow(mismatch)
@@ -277,21 +283,29 @@ not every one is a participant or a biospecimen:
 ```{r}
 #| label: biospecimens
 bs <- htan_tbl("biospecimen", con) |>
-    dplyr::select(HTAN_Biospecimen_ID, HTAN_Parent_ID, Biospecimen_Type,
-        Acquisition_Method_Type, Preservation_Method, Tumor_Tissue_Type,
-        Site_of_Resection_or_Biopsy) |>
+    dplyr::select(
+        HTAN_Biospecimen_ID,
+        HTAN_Parent_ID,
+        Biospecimen_Type,
+        Acquisition_Method_Type,
+        Preservation_Method,
+        Tumor_Tissue_Type,
+        Site_of_Resection_or_Biopsy
+    ) |>
     dplyr::collect()
 participants <- htan_tbl("clinical_tier1_demographics", con) |>
     dplyr::distinct(HTAN_Participant_ID) |>
     dplyr::pull()
 
 bs |>
-    dplyr::mutate(parent_is = dplyr::case_when(
-        HTAN_Parent_ID == HTAN_Biospecimen_ID ~ "itself",
-        HTAN_Parent_ID %in% participants ~ "a participant",
-        HTAN_Parent_ID %in% bs$HTAN_Biospecimen_ID ~ "a biospecimen",
-        .default = "an ID in neither table"
-    )) |>
+    dplyr::mutate(
+        parent_is = dplyr::case_when(
+            HTAN_Parent_ID == HTAN_Biospecimen_ID ~ "itself",
+            HTAN_Parent_ID %in% participants ~ "a participant",
+            HTAN_Parent_ID %in% bs$HTAN_Biospecimen_ID ~ "a biospecimen",
+            .default = "an ID in neither table"
+        )
+    ) |>
     dplyr::count(parent_is)
 ```
 
@@ -321,10 +335,16 @@ Here is the path with each biospecimen's annotation:
 ```{r}
 #| label: walk-biospecimen-table
 bs |>
-    dplyr::filter(HTAN_Biospecimen_ID %in% biospecimen_path("HTA5_1430_1022", bs)) |>
+    dplyr::filter(
+        HTAN_Biospecimen_ID %in% biospecimen_path("HTA5_1430_1022", bs)
+    ) |>
     dplyr::arrange(HTAN_Biospecimen_ID) |>
-    dplyr::select(HTAN_Biospecimen_ID, HTAN_Parent_ID, Preservation_Method,
-        Site = Site_of_Resection_or_Biopsy)
+    dplyr::select(
+        HTAN_Biospecimen_ID,
+        HTAN_Parent_ID,
+        Preservation_Method,
+        Site = Site_of_Resection_or_Biopsy
+    )
 ```
 
 Annotations such as tissue type and site are often repeated on every
@@ -395,8 +415,11 @@ per_file <- prov |>
     ) |>
     dplyr::collect()
 bucket <- function(x) {
-    cut(x, c(-Inf, 0, 1, 2, 10, 100, Inf),
-        labels = c("0", "1", "2", "3-10", "11-100", ">100"))
+    cut(
+        x,
+        c(-Inf, 0, 1, 2, 10, 100, Inf),
+        labels = c("0", "1", "2", "3-10", "11-100", ">100")
+    )
 }
 tibble::tibble(
     count = levels(bucket(1)),
@@ -427,8 +450,14 @@ Start with a Level 4 Visium object from the Vanderbilt colorectal atlas:
 visium_id <- "HTA11_7862_200000101134111"
 htan_files(con) |>
     dplyr::filter(HTAN_Data_File_ID == visium_id) |>
-    dplyr::select(Component, Filename, File_Size, HTAN_Participant_ID,
-        HTAN_Assayed_Biospecimen_ID, access) |>
+    dplyr::select(
+        Component,
+        Filename,
+        File_Size,
+        HTAN_Participant_ID,
+        HTAN_Assayed_Biospecimen_ID,
+        access
+    ) |>
     dplyr::collect() |>
     dplyr::glimpse()
 ```
@@ -467,7 +496,11 @@ polyp. The participant's diagnosis record tells us almost nothing:
 #| label: visium-diagnosis
 htan_tbl("clinical_tier1_diagnosis", con) |>
     dplyr::filter(HTAN_Participant_ID == "HTA11_7862") |>
-    dplyr::select(Primary_Diagnosis, Tissue_or_Organ_of_Origin, Age_at_Diagnosis) |>
+    dplyr::select(
+        Primary_Diagnosis,
+        Tissue_or_Organ_of_Origin,
+        Age_at_Diagnosis
+    ) |>
     dplyr::collect()
 ```
 
@@ -481,8 +514,7 @@ The assay table records the Visium object's parents in a single field:
 
 ```{r}
 #| label: visium-assay-table
-htan_tbl("10xvisium_spatialtranscriptomics_scRNAseq_level4_metadata",
-    con) |>
+htan_tbl("10xvisium_spatialtranscriptomics_scRNAseq_level4_metadata", con) |>
     dplyr::filter(HTAN_Data_File_ID == visium_id) |>
     dplyr::pull(HTAN_Parent_Data_File_ID)
 ```
@@ -506,16 +538,25 @@ count_commas <- function(table) {
     htan_tbl(table, con) |>
         dplyr::summarise(
             files = dplyr::n(),
-            several_parents = sum(as.integer(
-                grepl(",", HTAN_Parent_Data_File_ID)), na.rm = TRUE)
+            several_parents = sum(
+                as.integer(
+                    grepl(",", HTAN_Parent_Data_File_ID)
+                ),
+                na.rm = TRUE
+            )
         ) |>
         dplyr::collect() |>
         dplyr::mutate(table = table, .before = 1)
 }
-dplyr::bind_rows(lapply(c("scRNAseq_level3_metadata", "scRNAseq_level4_metadata",
-    "imaging_level4_metadata",
-    "10xvisium_spatialtranscriptomics_scRNAseq_level4_metadata"),
-    count_commas))
+dplyr::bind_rows(lapply(
+    c(
+        "scRNAseq_level3_metadata",
+        "scRNAseq_level4_metadata",
+        "imaging_level4_metadata",
+        "10xvisium_spatialtranscriptomics_scRNAseq_level4_metadata"
+    ),
+    count_commas
+))
 ```
 
 A filter such as `HTAN_Parent_Data_File_ID == "HTA11_7862_200000101133111"`
@@ -553,7 +594,12 @@ from an Orion whole-slide image (Harvard Medical School):
 htan_lineage("HTA7_1000_1003", con = con) |>
     dplyr::arrange(depth) |>
     dplyr::collect() |>
-    dplyr::transmute(depth, related_file_id, Component, file = basename(Filename))
+    dplyr::transmute(
+        depth,
+        related_file_id,
+        Component,
+        file = basename(Filename)
+    )
 ```
 
 The table was computed from a segmentation mask (Level 3), and the mask
@@ -576,8 +622,11 @@ htan_files(con) |>
     dplyr::glimpse()
 prov |>
     dplyr::filter(HTAN_Data_File_ID == pooled_id) |>
-    dplyr::distinct(HTAN_Parent_Data_File_ID, HTAN_Participant_ID,
-        HTAN_Assayed_Biospecimen_ID) |>
+    dplyr::distinct(
+        HTAN_Parent_Data_File_ID,
+        HTAN_Participant_ID,
+        HTAN_Assayed_Biospecimen_ID
+    ) |>
     dplyr::collect()
 ```
 
@@ -627,7 +676,10 @@ once:
 #| label: duplicates
 dup_count <- function(table, id) {
     htan_tbl(table, con) |>
-        dplyr::summarise(rows = dplyr::n(), distinct_ids = dplyr::n_distinct(.data[[id]])) |>
+        dplyr::summarise(
+            rows = dplyr::n(),
+            distinct_ids = dplyr::n_distinct(.data[[id]])
+        ) |>
         dplyr::collect() |>
         dplyr::mutate(table = table, .before = 1)
 }
@@ -670,7 +722,11 @@ age.
 #| label: text-numbers
 htan_tbl("clinical_tier1_diagnosis", con) |>
     head(1) |>
-    dplyr::select(Age_at_Diagnosis, Days_to_Last_Follow_up, Year_of_Diagnosis) |>
+    dplyr::select(
+        Age_at_Diagnosis,
+        Days_to_Last_Follow_up,
+        Year_of_Diagnosis
+    ) |>
     dplyr::collect() |>
     vapply(class, "")
 ```

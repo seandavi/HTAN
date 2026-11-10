@@ -89,8 +89,11 @@ analyse. These are the open ones, by center and format:
 ```{r}
 #| label: visium-candidates
 visium <- htan_files(con) |>
-    dplyr::filter(assay == "10xVisiumSpatialTranscriptomics-RNA-seq",
-        level == 4, access == "open-synapse")
+    dplyr::filter(
+        assay == "10xVisiumSpatialTranscriptomics-RNA-seq",
+        level == 4,
+        access == "open-synapse"
+    )
 visium |>
     dplyr::count(HTAN_Center, extension) |>
     dplyr::arrange(dplyr::desc(n)) |>
@@ -109,21 +112,35 @@ assayed biospecimen:
 ```{r}
 #| label: candidates
 biospecimens <- htan_tbl("biospecimen", con) |>
-    dplyr::select(HTAN_Assayed_Biospecimen_ID = HTAN_Biospecimen_ID,
-        Tumor_Tissue_Type, Site_of_Resection_or_Biopsy)
+    dplyr::select(
+        HTAN_Assayed_Biospecimen_ID = HTAN_Biospecimen_ID,
+        Tumor_Tissue_Type,
+        Site_of_Resection_or_Biopsy
+    )
 candidates <- visium |>
     dplyr::filter(extension == ".h5ad", n_participants == 1) |>
     dplyr::inner_join(biospecimens, by = "HTAN_Assayed_Biospecimen_ID") |>
-    dplyr::filter(Tumor_Tissue_Type != "Not Otherwise Specified",
-        Site_of_Resection_or_Biopsy != "Not Reported") |>
+    dplyr::filter(
+        Tumor_Tissue_Type != "Not Otherwise Specified",
+        Site_of_Resection_or_Biopsy != "Not Reported"
+    ) |>
     dplyr::arrange(File_Size) |>
-    dplyr::select(HTAN_Data_File_ID, Filename, File_Size, Tumor_Tissue_Type,
-        Site_of_Resection_or_Biopsy) |>
+    dplyr::select(
+        HTAN_Data_File_ID,
+        Filename,
+        File_Size,
+        Tumor_Tissue_Type,
+        Site_of_Resection_or_Biopsy
+    ) |>
     dplyr::collect()
 nrow(candidates)
 candidates |>
-    dplyr::transmute(file = basename(Filename), MB = round(File_Size / 1e6),
-        Tumor_Tissue_Type, site = Site_of_Resection_or_Biopsy) |>
+    dplyr::transmute(
+        file = basename(Filename),
+        MB = round(File_Size / 1e6),
+        Tumor_Tissue_Type,
+        site = Site_of_Resection_or_Biopsy
+    ) |>
     head(10)
 ```
 
@@ -143,8 +160,17 @@ stopifnot(visium_id %in% candidates$HTAN_Data_File_ID)
 file <- htan_files(con) |>
     dplyr::filter(HTAN_Data_File_ID == visium_id) |>
     dplyr::collect()
-dplyr::glimpse(dplyr::select(file, HTAN_Data_File_ID, Filename, File_Size, md5,
-    entityId, HTAN_Participant_ID, HTAN_Assayed_Biospecimen_ID, access))
+dplyr::glimpse(dplyr::select(
+    file,
+    HTAN_Data_File_ID,
+    Filename,
+    File_Size,
+    md5,
+    entityId,
+    HTAN_Participant_ID,
+    HTAN_Assayed_Biospecimen_ID,
+    access
+))
 ```
 
 The `entityId` is the file's Synapse ID. `access` is `open-synapse`, so
@@ -157,10 +183,17 @@ The assay table holds the processing details:
 ```{r}
 #| label: workflow
 workflow <- htan_tbl(
-    "10xvisium_spatialtranscriptomics_scRNAseq_level4_metadata", con) |>
+    "10xvisium_spatialtranscriptomics_scRNAseq_level4_metadata",
+    con
+) |>
     dplyr::filter(HTAN_Data_File_ID == visium_id) |>
-    dplyr::select(Workflow_Version, Visium_Workflow_Type,
-        Visium_Workflow_Parameters_Description, Run_ID, Data_Release) |>
+    dplyr::select(
+        Workflow_Version,
+        Visium_Workflow_Type,
+        Visium_Workflow_Parameters_Description,
+        Run_ID,
+        Data_Release
+    ) |>
     dplyr::collect()
 dplyr::glimpse(workflow)
 ```
@@ -185,8 +218,11 @@ lineage <- htan_lineage(visium_id, con = con) |>
     dplyr::arrange(depth, related_file_id) |>
     dplyr::collect()
 lineage |>
-    dplyr::transmute(depth, Component = sub("10xVisiumSpatialTranscriptomics-",
-        "", Component), file = basename(Filename))
+    dplyr::transmute(
+        depth,
+        Component = sub("10xVisiumSpatialTranscriptomics-", "", Component),
+        file = basename(Filename)
+    )
 ```
 
 The chain runs from FASTQ (Level 1, controlled) through aligned BAM
@@ -198,9 +234,15 @@ record and the participant's:
 #| label: biospecimen
 biospecimen <- htan_tbl("biospecimen", con) |>
     dplyr::filter(HTAN_Biospecimen_ID == !!file$HTAN_Assayed_Biospecimen_ID) |>
-    dplyr::select(HTAN_Biospecimen_ID, HTAN_Parent_ID, Acquisition_Method_Type,
-        Preservation_Method, Tumor_Tissue_Type, Site_of_Resection_or_Biopsy,
-        Histologic_Morphology_Code) |>
+    dplyr::select(
+        HTAN_Biospecimen_ID,
+        HTAN_Parent_ID,
+        Acquisition_Method_Type,
+        Preservation_Method,
+        Tumor_Tissue_Type,
+        Site_of_Resection_or_Biopsy,
+        Histologic_Morphology_Code
+    ) |>
     dplyr::collect()
 dplyr::glimpse(biospecimen)
 
@@ -211,8 +253,12 @@ htan_tbl("clinical_tier1_demographics", con) |>
 
 diagnosis <- htan_tbl("clinical_tier1_diagnosis", con) |>
     dplyr::filter(HTAN_Participant_ID == !!file$HTAN_Participant_ID) |>
-    dplyr::select(Primary_Diagnosis, Morphology, Tissue_or_Organ_of_Origin,
-        Tumor_Grade) |>
+    dplyr::select(
+        Primary_Diagnosis,
+        Morphology,
+        Tissue_or_Organ_of_Origin,
+        Tumor_Grade
+    ) |>
     dplyr::collect()
 diagnosis
 ```
@@ -293,9 +339,13 @@ and leave them as they are.
 #| label: symbols
 #| eval: !expr have_token
 if (mean(grepl("^ENSG", rownames(spe))) > 0.5) {
-    symbol_col <- intersect(c("gene_symbols", "gene_name", "feature_name",
-        "symbol", "gene_ids"), names(SummarizedExperiment::rowData(spe)))[1]
-    rownames(spe) <- make.unique(as.character(SummarizedExperiment::rowData(spe)[[symbol_col]]))
+    symbol_col <- intersect(
+        c("gene_symbols", "gene_name", "feature_name", "symbol", "gene_ids"),
+        names(SummarizedExperiment::rowData(spe))
+    )[1]
+    rownames(spe) <- make.unique(as.character(SummarizedExperiment::rowData(
+        spe
+    )[[symbol_col]]))
 }
 head(rownames(spe))
 sum(grepl("^DEPRECATED_", rownames(spe)))
@@ -329,17 +379,27 @@ to:
 #| eval: !expr have_token
 if (!is(spe, "SpatialExperiment")) {
     pos_id <- lineage$related_file_id[
-        grepl("tissue_positions", lineage$Filename)]
+        grepl("tissue_positions", lineage$Filename)
+    ]
     pos_dl <- htan_download(pos_id, con = con)
     ## Space Ranger 2.0 writes a header row; 1.x did not.
     has_header <- startsWith(readLines(pos_dl$path, n = 1), "barcode")
     pos <- read.csv(pos_dl$path, header = has_header)
-    names(pos) <- c("barcode", "in_tissue", "array_row", "array_col",
-        "pxl_row", "pxl_col")
+    names(pos) <- c(
+        "barcode",
+        "in_tissue",
+        "array_row",
+        "array_col",
+        "pxl_row",
+        "pxl_col"
+    )
     pos <- pos[match(colnames(spe), pos$barcode), ]
     SummarizedExperiment::colData(spe)$in_tissue <- pos$in_tissue
     spe <- as(spe, "SpatialExperiment")
-    SpatialExperiment::spatialCoords(spe) <- as.matrix(pos[, c("pxl_col", "pxl_row")])
+    SpatialExperiment::spatialCoords(spe) <- as.matrix(pos[, c(
+        "pxl_col",
+        "pxl_row"
+    )])
 }
 dim(SpatialExperiment::spatialCoords(spe))
 ```
@@ -369,14 +429,22 @@ added to the spots' own `colData` first:
 ```{r}
 #| label: mae
 #| eval: !expr have_token
-for (field in c("HTAN_Biospecimen_ID", "Tumor_Tissue_Type",
-    "Site_of_Resection_or_Biopsy", "Histologic_Morphology_Code")) {
+for (field in c(
+    "HTAN_Biospecimen_ID",
+    "Tumor_Tissue_Type",
+    "Site_of_Resection_or_Biopsy",
+    "Histologic_Morphology_Code"
+)) {
     SummarizedExperiment::colData(spe)[[field]] <- biospecimen[[field]]
 }
 mae <- htan_experiment(setNames(list(spe), visium_id), con = con)
 mae
-MultiAssayExperiment::colData(mae)[, c("Gender", "Race", "Vital_Status",
-    "Primary_Diagnosis")]
+MultiAssayExperiment::colData(mae)[, c(
+    "Gender",
+    "Race",
+    "Vital_Status",
+    "Primary_Diagnosis"
+)]
 head(MultiAssayExperiment::sampleMap(mae))
 ```
 
@@ -430,7 +498,9 @@ qc_subsets <- if (any(is_mito)) list(mito = is_mito) else list()
 spe <- scrapper::quickRnaQc.se(spe, subsets = qc_subsets)
 summary(spe$sum)
 summary(spe$detected)
-if (any(is_mito)) summary(spe$subset.proportion.mito)
+if (any(is_mito)) {
+    summary(spe$subset.proportion.mito)
+}
 ```
 
 Plotted on the tissue, the metrics show whether low-quality spots are
@@ -448,8 +518,10 @@ spot_coords <- function(spe) {
     xy
 }
 spot_plot <- function(spe, values, name) {
-    ggplot2::ggplot(cbind(spot_coords(spe), value = values),
-        ggplot2::aes(x, y, colour = value)) +
+    ggplot2::ggplot(
+        cbind(spot_coords(spe), value = values),
+        ggplot2::aes(x, y, colour = value)
+    ) +
         ggplot2::geom_point(size = 1) +
         ggplot2::scale_y_reverse() +
         ggplot2::coord_fixed() +
@@ -476,9 +548,11 @@ thresholds <- S4Vectors::metadata(spe)$qc$thresholds
 unlist(thresholds)
 n_before <- ncol(spe)
 n_discard <- sum(!spe$keep)
-c(low_sum = sum(spe$sum < thresholds$sum),
+c(
+    low_sum = sum(spe$sum < thresholds$sum),
     low_detected = sum(spe$detected < thresholds$detected),
-    discard = n_discard)
+    discard = n_discard
+)
 spe <- spe[, spe$keep]
 dim(spe)
 ```
@@ -520,17 +594,26 @@ clustering. This panel has none, so here that step does nothing.
 #| eval: !expr have_token
 spe <- scrapper::chooseRnaHvgs.se(spe, top = 2000)
 if (any(is_mito)) {
-    SummarizedExperiment::rowData(spe)$hvg <- SummarizedExperiment::rowData(spe)$hvg & !is_mito
+    SummarizedExperiment::rowData(spe)$hvg <- SummarizedExperiment::rowData(
+        spe
+    )$hvg &
+        !is_mito
 }
 sum(SummarizedExperiment::rowData(spe)$hvg)
-hvg_stats <- SummarizedExperiment::rowData(spe)[SummarizedExperiment::rowData(spe)$hvg, ]
+hvg_stats <- SummarizedExperiment::rowData(spe)[
+    SummarizedExperiment::rowData(spe)$hvg,
+]
 head(rownames(hvg_stats)[order(hvg_stats$residuals, decreasing = TRUE)], 20)
 ```
 
 ```{r}
 #| label: pca
 #| eval: !expr have_token
-spe <- scrapper::runPca.se(spe, features = SummarizedExperiment::rowData(spe)$hvg, number = 30)
+spe <- scrapper::runPca.se(
+    spe,
+    features = SummarizedExperiment::rowData(spe)$hvg,
+    number = 30
+)
 pca <- S4Vectors::metadata(spe)$PCA
 percent_var <- 100 * pca$variance.explained / pca$total.variance
 round(head(percent_var, 10), 1)
@@ -556,9 +639,13 @@ would give cleaner domains, but we would lose that independent check.
 ```{r}
 #| label: cluster
 #| eval: !expr have_token
-spe <- scrapper::clusterGraph.se(spe, method = "leiden", resolution = 0.5,
+spe <- scrapper::clusterGraph.se(
+    spe,
+    method = "leiden",
+    resolution = 0.5,
     more.build.args = list(weight.scheme = "jaccard"),
-    output.name = "cluster")
+    output.name = "cluster"
+)
 table(spe$cluster)
 ```
 
@@ -568,7 +655,9 @@ table(spe$cluster)
 #| fig-height: 4.5
 #| fig-cap: "Expression clusters on the tissue section."
 spot_plot(spe, spe$cluster, "Cluster") +
-    ggplot2::guides(colour = ggplot2::guide_legend(override.aes = list(size = 3)))
+    ggplot2::guides(
+        colour = ggplot2::guide_legend(override.aes = list(size = 3))
+    )
 ```
 
 ```{r}
@@ -598,9 +687,13 @@ usually do.
 #| label: markers
 #| eval: !expr have_token
 markers <- scrapper::scoreMarkers.se(spe, groups = spe$cluster)
-top_markers <- vapply(markers, function(m) {
-    paste(head(rownames(m), 8), collapse = ", ")
-}, "")
+top_markers <- vapply(
+    markers,
+    function(m) {
+        paste(head(rownames(m), 8), collapse = ", ")
+    },
+    ""
+)
 tibble::tibble(cluster = names(top_markers), top_markers = top_markers)
 ```
 
@@ -619,8 +712,10 @@ marker:
 ```{r}
 #| label: cluster-summary
 #| eval: !expr have_token
-multicopy <- grepl("^(SERF1|USP17L|FAM153|MTRNR2L|TAF11L|GAGE|CT45A)",
-    rownames(spe))
+multicopy <- grepl(
+    "^(SERF1|USP17L|FAM153|MTRNR2L|TAF11L|GAGE|CT45A)",
+    rownames(spe)
+)
 sum(multicopy)
 clusters <- factor(spe$cluster)
 per_cluster <- function(v, f = median) as.vector(tapply(v, clusters, f))
@@ -629,10 +724,20 @@ cluster_summary <- tibble::tibble(
     spots = per_cluster(spe$sum, length),
     median_counts = per_cluster(spe$sum),
     median_genes = per_cluster(spe$detected),
-    multicopy_share = round(per_cluster(
-        colSums(SingleCellExperiment::counts(spe)[multicopy, ]) / spe$sum), 2),
-    EPCAM = round(per_cluster(SingleCellExperiment::logcounts(spe)["EPCAM", ], mean), 2),
-    COL1A1 = round(per_cluster(SingleCellExperiment::logcounts(spe)["COL1A1", ], mean), 2)
+    multicopy_share = round(
+        per_cluster(
+            colSums(SingleCellExperiment::counts(spe)[multicopy, ]) / spe$sum
+        ),
+        2
+    ),
+    EPCAM = round(
+        per_cluster(SingleCellExperiment::logcounts(spe)["EPCAM", ], mean),
+        2
+    ),
+    COL1A1 = round(
+        per_cluster(SingleCellExperiment::logcounts(spe)["COL1A1", ], mean),
+        2
+    )
 )
 cluster_summary
 epi <- cluster_summary$cluster[which.max(cluster_summary$EPCAM)]
@@ -649,8 +754,11 @@ against the other clusters.
 ```{r}
 #| label: markers-epithelial
 #| eval: !expr have_token
-scrapper::previewMarkers(markers[[epi]], rows = 8, columns = c("mean", "detected",
-    d = "cohens.d.mean", auc = "auc.mean"))
+scrapper::previewMarkers(
+    markers[[epi]],
+    rows = 8,
+    columns = c("mean", "detected", d = "cohens.d.mean", auc = "auc.mean")
+)
 ```
 
 To pin the clusters down, we plot known markers of the colonic mucosa:
@@ -666,18 +774,23 @@ is coloured relative to its own maximum:
 #| fig-height: 6
 #| fig-width: 8
 #| fig-cap: "Marker genes on the tissue, each relative to its maximum."
-genes <- intersect(c("EPCAM", "MUC2", "CA1", "COL1A1", "PTPRC", "SERF1A"),
-    rownames(spe))
-long <- do.call(rbind, lapply(genes, function(g) {
-    v <- SingleCellExperiment::logcounts(spe)[g, ]
-    cbind(spot_coords(spe), gene = g, relative = v / max(v))
-}))
+genes <- intersect(
+    c("EPCAM", "MUC2", "CA1", "COL1A1", "PTPRC", "SERF1A"),
+    rownames(spe)
+)
+long <- do.call(
+    rbind,
+    lapply(genes, function(g) {
+        v <- SingleCellExperiment::logcounts(spe)[g, ]
+        cbind(spot_coords(spe), gene = g, relative = v / max(v))
+    })
+)
 ggplot2::ggplot(long, ggplot2::aes(x, y, colour = relative)) +
     ggplot2::geom_point(size = 0.6) +
     ggplot2::scale_colour_viridis_c(labels = scales::percent) +
     ggplot2::scale_y_reverse() +
     ggplot2::coord_fixed() +
-    ggplot2::facet_wrap(~ gene) +
+    ggplot2::facet_wrap(~gene) +
     ggplot2::labs(x = NULL, y = NULL, colour = "Share of\nmaximum") +
     ggplot2::theme_void()
 ```

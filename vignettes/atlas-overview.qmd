@@ -55,13 +55,20 @@ con <- htan_con("r7")
 ```{r}
 #| label: theme
 #| include: false
-ggplot2::theme_set(ggplot2::theme_minimal(base_size = 11) +
-    ggplot2::theme(panel.grid.minor = ggplot2::element_blank(),
-        panel.grid.major.y = ggplot2::element_blank(),
-        plot.title.position = "plot"))
+ggplot2::theme_set(
+    ggplot2::theme_minimal(base_size = 11) +
+        ggplot2::theme(
+            panel.grid.minor = ggplot2::element_blank(),
+            panel.grid.major.y = ggplot2::element_blank(),
+            plot.title.position = "plot"
+        )
+)
 blue <- "#2a78d6"
-tier_colours <- c(`open-synapse` = "#2a78d6", `open-gc` = "#eb6834",
-    controlled = "#1baf7a")
+tier_colours <- c(
+    `open-synapse` = "#2a78d6",
+    `open-gc` = "#eb6834",
+    controlled = "#1baf7a"
+)
 ```
 
 # Building the working tables
@@ -85,7 +92,8 @@ modality_of <- function(assay, imaging_type) {
         assay %in% c("ScRNA-seq", "ScATAC-seq", "ScDNA-seq") ~
             "Single-cell sequencing",
         grepl("Visium|Xenium|GeoMx|Slide-seq", assay) |
-            imaging_type == "MERFISH" | assay == "ExSeqMinimal" ~
+            imaging_type == "MERFISH" |
+            assay == "ExSeqMinimal" ~
             "Spatial transcriptomics",
         imaging_type == "H&E" ~ "H&E",
         assay %in% c("Imaging", "SRRSImaging") ~ "Multiplexed imaging",
@@ -98,16 +106,35 @@ modality_of <- function(assay, imaging_type) {
 }
 
 files <- htan_files(con) |>
-    dplyr::select(HTAN_Data_File_ID, HTAN_Center, Component, assay, level,
-        extension, File_Size, access, n_participants) |>
+    dplyr::select(
+        HTAN_Data_File_ID,
+        HTAN_Center,
+        Component,
+        assay,
+        level,
+        extension,
+        File_Size,
+        access,
+        n_participants
+    ) |>
     dplyr::collect() |>
     dplyr::left_join(imaging_types, by = "HTAN_Data_File_ID") |>
     dplyr::mutate(modality = modality_of(assay, Imaging_Assay_Type))
 
 file_participants <- htan_file_participants(con) |>
     dplyr::collect() |>
-    dplyr::inner_join(dplyr::select(files, HTAN_Data_File_ID, HTAN_Center, assay, level,
-        modality, Imaging_Assay_Type), by = "HTAN_Data_File_ID")
+    dplyr::inner_join(
+        dplyr::select(
+            files,
+            HTAN_Data_File_ID,
+            HTAN_Center,
+            assay,
+            level,
+            modality,
+            Imaging_Assay_Type
+        ),
+        by = "HTAN_Data_File_ID"
+    )
 
 dim(files)
 dim(file_participants)
@@ -175,10 +202,13 @@ centers <- file_participants |>
     dplyr::left_join(
         files |>
             dplyr::group_by(HTAN_Center) |>
-            dplyr::summarise(files = dplyr::n(),
+            dplyr::summarise(
+                files = dplyr::n(),
                 size_tb = round(sum(File_Size, na.rm = TRUE) / 1e12, 2),
-                assays = dplyr::n_distinct(assay)),
-        by = "HTAN_Center") |>
+                assays = dplyr::n_distinct(assay)
+            ),
+        by = "HTAN_Center"
+    ) |>
     dplyr::arrange(dplyr::desc(participants))
 knitr::kable(centers, format.args = list(big.mark = ","))
 ```
@@ -188,13 +218,16 @@ knitr::kable(centers, format.args = list(big.mark = ","))
 #| include: false
 top <- centers$HTAN_Center[1]
 dcis_top <- htan_tbl("clinical_tier1_diagnosis", con) |>
-    dplyr::filter(HTAN_Center == !!top,
-        Primary_Diagnosis == "Ductal carcinoma in situ NOS") |>
+    dplyr::filter(
+        HTAN_Center == !!top,
+        Primary_Diagnosis == "Ductal carcinoma in situ NOS"
+    ) |>
     dplyr::summarise(n = dplyr::n_distinct(HTAN_Participant_ID)) |>
     dplyr::pull()
 most_files <- centers$HTAN_Center[which.max(centers$files)]
-em_share <- mean(files$assay[files$HTAN_Center == most_files] ==
-    "ElectronMicroscopy")
+em_share <- mean(
+    files$assay[files$HTAN_Center == most_files] == "ElectronMicroscopy"
+)
 ```
 
 The centers differ by orders of magnitude, and which center looks largest
@@ -212,11 +245,20 @@ biospecimens.
 #| label: fig-centers
 #| fig-height: 4.5
 #| fig-cap: "Participants with at least one released file, by center."
-ggplot2::ggplot(centers, ggplot2::aes(participants, reorder(HTAN_Center, participants))) +
+ggplot2::ggplot(
+    centers,
+    ggplot2::aes(participants, reorder(HTAN_Center, participants))
+) +
     ggplot2::geom_col(fill = blue, width = 0.7) +
-    ggplot2::geom_text(ggplot2::aes(label = fmt(participants)), hjust = -0.15, size = 3.2,
-        colour = "grey25") +
-    ggplot2::scale_x_continuous(expand = ggplot2::expansion(mult = c(0, 0.12))) +
+    ggplot2::geom_text(
+        ggplot2::aes(label = fmt(participants)),
+        hjust = -0.15,
+        size = 3.2,
+        colour = "grey25"
+    ) +
+    ggplot2::scale_x_continuous(
+        expand = ggplot2::expansion(mult = c(0, 0.12))
+    ) +
     ggplot2::labs(x = "Participants", y = NULL)
 ```
 
@@ -237,20 +279,31 @@ organ_map <- htan_tbl("tissueOrOrganOfOrigin_to_wholeOrgan_mapping", con) |>
     dplyr::mutate(key = tolower(Tissue_or_Organ_of_Origin)) |>
     dplyr::distinct(key, .keep_all = TRUE)
 dx <- htan_tbl("clinical_tier1_diagnosis", con) |>
-    dplyr::select(HTAN_Participant_ID, HTAN_Center, Tissue_or_Organ_of_Origin,
-        Primary_Diagnosis) |>
+    dplyr::select(
+        HTAN_Participant_ID,
+        HTAN_Center,
+        Tissue_or_Organ_of_Origin,
+        Primary_Diagnosis
+    ) |>
     dplyr::collect() |>
     dplyr::mutate(key = tolower(Tissue_or_Organ_of_Origin)) |>
     dplyr::left_join(dplyr::select(organ_map, key, Whole_Organ), by = "key") |>
-    dplyr::mutate(organ = dplyr::case_when(
+    dplyr::mutate(
+        organ = dplyr::case_when(
             !is.na(Whole_Organ) ~ Whole_Organ,
             grepl("lung", key) ~ "Lung",
             grepl("^skin", key) ~ "Skin",
             grepl("connective|soft tissue|paraspinal", key) ~ "Soft Tissue",
             grepl("bone", key) ~ "Bone",
-            .default = Tissue_or_Organ_of_Origin),
-        organ = dplyr::if_else(tolower(organ) %in% c("not reported", "unknown",
-            "unknown primary site"), "Not reported", organ))
+            .default = Tissue_or_Organ_of_Origin
+        ),
+        organ = dplyr::if_else(
+            tolower(organ) %in%
+                c("not reported", "unknown", "unknown primary site"),
+            "Not reported",
+            organ
+        )
+    )
 with_files <- unique(file_participants$HTAN_Participant_ID)
 organ_center <- dx |>
     dplyr::filter(HTAN_Participant_ID %in% with_files) |>
@@ -261,8 +314,10 @@ organs <- organ_center |>
 main_center <- organ_center |>
     dplyr::count(organ, HTAN_Center) |>
     dplyr::group_by(organ) |>
-    dplyr::summarise(main_center = HTAN_Center[which.max(n)],
-        main_center_share = pct(max(n) / sum(n)))
+    dplyr::summarise(
+        main_center = HTAN_Center[which.max(n)],
+        main_center_share = pct(max(n) / sum(n))
+    )
 organs |>
     dplyr::left_join(main_center, by = "organ") |>
     head(15)
@@ -276,9 +331,15 @@ organs |>
     dplyr::slice_head(n = 15) |>
     ggplot2::ggplot(ggplot2::aes(n, reorder(organ, n))) +
     ggplot2::geom_col(fill = blue, width = 0.7) +
-    ggplot2::geom_text(ggplot2::aes(label = fmt(n)), hjust = -0.15, size = 3.2,
-        colour = "grey25") +
-    ggplot2::scale_x_continuous(expand = ggplot2::expansion(mult = c(0, 0.12))) +
+    ggplot2::geom_text(
+        ggplot2::aes(label = fmt(n)),
+        hjust = -0.15,
+        size = 3.2,
+        colour = "grey25"
+    ) +
+    ggplot2::scale_x_continuous(
+        expand = ggplot2::expansion(mult = c(0, 0.12))
+    ) +
     ggplot2::labs(x = "Participants", y = NULL)
 ```
 
@@ -320,12 +381,20 @@ File counts by assay and data level:
 ```{r}
 #| label: assay-levels
 assay_levels <- files |>
-    dplyr::mutate(level = dplyr::if_else(is.na(level), "none", paste("Level", level))) |>
+    dplyr::mutate(
+        level = dplyr::if_else(is.na(level), "none", paste("Level", level))
+    ) |>
     dplyr::count(modality, assay, level) |>
-    tidyr::pivot_wider(names_from = level, values_from = n,
-        values_fill = 0) |>
-    dplyr::select(modality, assay, `Level 1`, `Level 2`, `Level 3`, `Level 4`,
-        none) |>
+    tidyr::pivot_wider(names_from = level, values_from = n, values_fill = 0) |>
+    dplyr::select(
+        modality,
+        assay,
+        `Level 1`,
+        `Level 2`,
+        `Level 3`,
+        `Level 4`,
+        none
+    ) |>
     dplyr::arrange(modality, assay)
 knitr::kable(assay_levels, format.args = list(big.mark = ","))
 ```
@@ -354,27 +423,40 @@ Counting participants rather than files, center by modality:
 heat <- file_participants |>
     dplyr::distinct(HTAN_Center, modality, HTAN_Participant_ID) |>
     dplyr::count(HTAN_Center, modality) |>
-    dplyr::mutate(HTAN_Center = factor(HTAN_Center,
-        levels = rev(centers$HTAN_Center)))
+    dplyr::mutate(
+        HTAN_Center = factor(HTAN_Center, levels = rev(centers$HTAN_Center))
+    )
 ggplot2::ggplot(heat, ggplot2::aes(modality, HTAN_Center, fill = n)) +
     ggplot2::geom_tile(colour = "white", linewidth = 0.6) +
-    ggplot2::geom_text(ggplot2::aes(label = n, colour = log10(n) > 0.55 * log10(max(n))),
-        size = 3) +
-    ggplot2::scale_fill_gradient(low = "#e3eefb", high = "#0d3d75", trans = "log10",
-        name = "Participants") +
-    ggplot2::scale_colour_manual(values = c(`TRUE` = "white", `FALSE` = "grey15"),
-        guide = "none") +
+    ggplot2::geom_text(
+        ggplot2::aes(label = n, colour = log10(n) > 0.55 * log10(max(n))),
+        size = 3
+    ) +
+    ggplot2::scale_fill_gradient(
+        low = "#e3eefb",
+        high = "#0d3d75",
+        trans = "log10",
+        name = "Participants"
+    ) +
+    ggplot2::scale_colour_manual(
+        values = c(`TRUE` = "white", `FALSE` = "grey15"),
+        guide = "none"
+    ) +
     ggplot2::labs(x = NULL, y = NULL) +
-    ggplot2::theme(axis.text.x = ggplot2::element_text(angle = 35, hjust = 1),
-        panel.grid = ggplot2::element_blank())
+    ggplot2::theme(
+        axis.text.x = ggplot2::element_text(angle = 35, hjust = 1),
+        panel.grid = ggplot2::element_blank()
+    )
 ```
 
 ```{r}
 #| label: heat-facts
 #| include: false
 centers_with <- function(m) unique(heat$HTAN_Center[heat$modality == m])
-both <- intersect(centers_with("Single-cell sequencing"),
-    centers_with("Multiplexed imaging"))
+both <- intersect(
+    centers_with("Single-cell sequencing"),
+    centers_with("Multiplexed imaging")
+)
 st_centers <- heat |>
     dplyr::filter(modality == "Spatial transcriptomics") |>
     dplyr::arrange(dplyr::desc(n))
@@ -405,11 +487,19 @@ behind each:
 imaging_participants <- file_participants |>
     dplyr::filter(!is.na(Imaging_Assay_Type)) |>
     dplyr::group_by(Imaging_Assay_Type) |>
-    dplyr::summarise(participants = dplyr::n_distinct(HTAN_Participant_ID),
-        centers = paste(sort(unique(sub("HTAN ", "", HTAN_Center))),
-            collapse = ", ")) |>
+    dplyr::summarise(
+        participants = dplyr::n_distinct(HTAN_Participant_ID),
+        centers = paste(
+            sort(unique(sub("HTAN ", "", HTAN_Center))),
+            collapse = ", "
+        )
+    ) |>
     dplyr::arrange(dplyr::desc(participants))
-imaging_files <- dplyr::count(imaging_types, Imaging_Assay_Type, name = "images")
+imaging_files <- dplyr::count(
+    imaging_types,
+    Imaging_Assay_Type,
+    name = "images"
+)
 imaging_participants |>
     dplyr::left_join(imaging_files, by = "Imaging_Assay_Type") |>
     dplyr::select(Imaging_Assay_Type, images, participants, centers) |>
@@ -434,8 +524,16 @@ data for:
 ```{r}
 #| label: combinations
 combos <- file_participants |>
-    dplyr::filter(modality %in% c("Single-cell sequencing", "Spatial transcriptomics",
-        "Multiplexed imaging", "H&E", "Bulk sequencing")) |>
+    dplyr::filter(
+        modality %in%
+            c(
+                "Single-cell sequencing",
+                "Spatial transcriptomics",
+                "Multiplexed imaging",
+                "H&E",
+                "Bulk sequencing"
+            )
+    ) |>
     dplyr::distinct(HTAN_Participant_ID, modality) |>
     dplyr::group_by(HTAN_Participant_ID) |>
     dplyr::summarise(combo = paste(sort(modality), collapse = " + ")) |>
@@ -454,9 +552,15 @@ combos |>
     dplyr::slice_head(n = 12) |>
     ggplot2::ggplot(ggplot2::aes(n, reorder(combo, n))) +
     ggplot2::geom_col(fill = blue, width = 0.7) +
-    ggplot2::geom_text(ggplot2::aes(label = fmt(n)), hjust = -0.15, size = 3.2,
-        colour = "grey25") +
-    ggplot2::scale_x_continuous(expand = ggplot2::expansion(mult = c(0, 0.12))) +
+    ggplot2::geom_text(
+        ggplot2::aes(label = fmt(n)),
+        hjust = -0.15,
+        size = 3.2,
+        colour = "grey25"
+    ) +
+    ggplot2::scale_x_continuous(
+        expand = ggplot2::expansion(mult = c(0, 0.12))
+    ) +
     ggplot2::labs(x = "Participants", y = NULL)
 ```
 
@@ -465,7 +569,8 @@ combos |>
 #| include: false
 has <- function(m) {
     unique(file_participants$HTAN_Participant_ID[
-        file_participants$modality == m])
+        file_participants$modality == m
+    ])
 }
 sc <- has("Single-cell sequencing")
 st <- has("Spatial transcriptomics")
@@ -518,12 +623,26 @@ downloads.
 #| fig-cap: >-
 #|   Sizes of open Level 3 and 4 files on Synapse, by modality (log scale).
 files |>
-    dplyr::filter(access == "open-synapse", level %in% c(3, 4), File_Size > 0,
-        modality %in% c("Single-cell sequencing", "Spatial transcriptomics",
-            "Multiplexed imaging", "Bulk sequencing")) |>
+    dplyr::filter(
+        access == "open-synapse",
+        level %in% c(3, 4),
+        File_Size > 0,
+        modality %in%
+            c(
+                "Single-cell sequencing",
+                "Spatial transcriptomics",
+                "Multiplexed imaging",
+                "Bulk sequencing"
+            )
+    ) |>
     ggplot2::ggplot(ggplot2::aes(File_Size, modality)) +
-    ggplot2::geom_boxplot(outlier.size = 0.4, outlier.alpha = 0.3, fill = "#e3eefb",
-        colour = blue, width = 0.6) +
+    ggplot2::geom_boxplot(
+        outlier.size = 0.4,
+        outlier.alpha = 0.3,
+        fill = "#e3eefb",
+        colour = blue,
+        width = 0.6
+    ) +
     ggplot2::facet_wrap(~ paste("Level", level)) +
     ggplot2::scale_x_log10(labels = scales::label_bytes(units = "auto_si")) +
     ggplot2::labs(x = "File size", y = NULL)
@@ -532,14 +651,25 @@ files |>
 ```{r}
 #| label: size-summary
 files |>
-    dplyr::filter(access == "open-synapse", level %in% c(3, 4), File_Size > 0,
-        modality %in% c("Single-cell sequencing", "Spatial transcriptomics",
-            "Multiplexed imaging", "Bulk sequencing")) |>
+    dplyr::filter(
+        access == "open-synapse",
+        level %in% c(3, 4),
+        File_Size > 0,
+        modality %in%
+            c(
+                "Single-cell sequencing",
+                "Spatial transcriptomics",
+                "Multiplexed imaging",
+                "Bulk sequencing"
+            )
+    ) |>
     dplyr::group_by(modality, level) |>
-    dplyr::summarise(files = dplyr::n(),
+    dplyr::summarise(
+        files = dplyr::n(),
         median = scales::label_bytes(units = "auto_si")(median(File_Size)),
         largest = scales::label_bytes(units = "auto_si")(max(File_Size)),
-        .groups = "drop")
+        .groups = "drop"
+    )
 ```
 
 Level 3 spatial transcriptomics files are small because each Space Ranger
@@ -557,8 +687,17 @@ folded into "Not reported":
 #| label: biospecimen-types
 norm <- function(x) {
     x <- trimws(x)
-    x[is.na(x) | tolower(x) %in% c("not reported", "not recorded",
-        "unknown", "not applicable", "")] <- "Not reported"
+    x[
+        is.na(x) |
+            tolower(x) %in%
+                c(
+                    "not reported",
+                    "not recorded",
+                    "unknown",
+                    "not applicable",
+                    ""
+                )
+    ] <- "Not reported"
     paste0(toupper(substr(x, 1, 1)), substr(x, 2, nchar(x)))
 }
 bios |>
@@ -609,13 +748,22 @@ alongside:
 
 ```{r}
 #| label: clinical-tables
-clin <- c("clinical_tier1_demographics", "clinical_tier1_diagnosis",
-    "clinical_tier1_therapy", "clinical_tier1_followup",
-    "clinical_tier1_exposure", "clinical_tier1_familyhistory",
-    "clinical_tier1_moleculartest", "clinical_tier2")
+clin <- c(
+    "clinical_tier1_demographics",
+    "clinical_tier1_diagnosis",
+    "clinical_tier1_therapy",
+    "clinical_tier1_followup",
+    "clinical_tier1_exposure",
+    "clinical_tier1_familyhistory",
+    "clinical_tier1_moleculartest",
+    "clinical_tier2"
+)
 dplyr::bind_rows(lapply(clin, function(t) {
     htan_tbl(t, con) |>
-        dplyr::summarise(rows = dplyr::n(), participants = dplyr::n_distinct(HTAN_Participant_ID)) |>
+        dplyr::summarise(
+            rows = dplyr::n(),
+            participants = dplyr::n_distinct(HTAN_Participant_ID)
+        ) |>
         dplyr::collect() |>
         dplyr::mutate(table = t, .before = 1)
 })) |>
@@ -640,18 +788,43 @@ not "Not Reported", "unknown", "Not Applicable" or a similar code.
 
 ```{r}
 #| label: completeness
-uninformative <- c("", "not reported", "not recorded", "unknown",
-    "not applicable", "not available", "na", "unknown primary site")
+uninformative <- c(
+    "",
+    "not reported",
+    "not recorded",
+    "unknown",
+    "not applicable",
+    "not available",
+    "na",
+    "unknown primary site"
+)
 completeness <- function(table) {
     x <- htan_tbl(table, con) |> dplyr::collect()
-    x <- x[setdiff(names(x), c("Component", "Id", "entityId", "Manifest_Id",
-        "Manifest_Version", "HTAN_Center", "HTAN_Participant_ID"))]
-    informative <- vapply(x, function(v) {
-        v <- tolower(trimws(as.character(v)))
-        mean(!is.na(v) & !v %in% uninformative)
-    }, numeric(1))
-    tibble::tibble(table = table, field = names(informative),
-        informative = informative)
+    x <- x[setdiff(
+        names(x),
+        c(
+            "Component",
+            "Id",
+            "entityId",
+            "Manifest_Id",
+            "Manifest_Version",
+            "HTAN_Center",
+            "HTAN_Participant_ID"
+        )
+    )]
+    informative <- vapply(
+        x,
+        function(v) {
+            v <- tolower(trimws(as.character(v)))
+            mean(!is.na(v) & !v %in% uninformative)
+        },
+        numeric(1)
+    )
+    tibble::tibble(
+        table = table,
+        field = names(informative),
+        informative = informative
+    )
 }
 dx_complete <- completeness("clinical_tier1_diagnosis") |>
     dplyr::arrange(dplyr::desc(informative))
@@ -668,8 +841,11 @@ dx_complete |>
     dplyr::slice_head(n = 30) |>
     ggplot2::ggplot(ggplot2::aes(informative, reorder(field, informative))) +
     ggplot2::geom_col(fill = blue, width = 0.7) +
-    ggplot2::scale_x_continuous(labels = scales::label_percent(),
-        limits = c(0, 1), expand = ggplot2::expansion(mult = c(0, 0.02))) +
+    ggplot2::scale_x_continuous(
+        labels = scales::label_percent(),
+        limits = c(0, 1),
+        expand = ggplot2::expansion(mult = c(0, 0.02))
+    ) +
     ggplot2::labs(x = "Records with an informative value", y = NULL)
 ```
 
@@ -747,8 +923,12 @@ ages |>
 ages |>
     dplyr::filter(age_days > 0) |>
     ggplot2::ggplot(ggplot2::aes(age_days / 365.25)) +
-    ggplot2::geom_histogram(binwidth = 2, boundary = 0, fill = blue,
-        colour = "white") +
+    ggplot2::geom_histogram(
+        binwidth = 2,
+        boundary = 0,
+        fill = blue,
+        colour = "white"
+    ) +
     ggplot2::labs(x = "Age at diagnosis (years)", y = "Participants")
 ```
 
