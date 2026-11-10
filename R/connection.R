@@ -6,10 +6,23 @@
 .htan <- new.env(parent = emptyenv())
 .htan$cons <- list()
 
-## Public snapshot (ADR-0003): a Hugging Face dataset with one git tag per
-## release and the parquet files at the repository root.
-.default_base_url <-
+#' Default HTAN snapshot location
+#'
+#' The URL [htan_con()] uses when neither `base_url` nor option
+#' `HTAN.base_url` is set: the public Hugging Face dataset
+#' <https://huggingface.co/datasets/seandavis/htan>, with one git tag per
+#' release and the parquet files at the repository root (ADR-0003).
+#' `{release}` is replaced by the release.
+#'
+#' @return `character(1)`.
+#'
+#' @examples
+#' htan_default_base_url()
+#'
+#' @export
+htan_default_base_url <- function() {
     "https://huggingface.co/datasets/seandavis/htan/resolve/{release}"
+}
 
 #' Connect to an HTAN metadata snapshot
 #'
@@ -35,8 +48,8 @@
 #'     `{release}`, that is replaced by `release` (the Hugging Face layout,
 #'     where the release is a tag); otherwise the release is a subdirectory,
 #'     `<base_url>/<release>/manifest.json` (the layout `just snapshot`
-#'     writes). Defaults to `getOption("HTAN.base_url")`, then the Hugging
-#'     Face dataset.
+#'     writes). Defaults to `getOption("HTAN.base_url")`, then
+#'     [htan_default_base_url()], the Hugging Face dataset.
 #' @param cache `character(1)`. BiocFileCache directory for downloaded
 #'     parquet files. Defaults to `getOption("HTAN.cache")`, then
 #'     `tools::R_user_dir("HTAN", "cache")`.
@@ -55,7 +68,7 @@
 #' @export
 htan_con <- function(
     release = "r7",
-    base_url = getOption("HTAN.base_url", .default_base_url),
+    base_url = getOption("HTAN.base_url", htan_default_base_url()),
     cache = getOption("HTAN.cache", tools::R_user_dir("HTAN", "cache")),
     refresh = FALSE
 ) {
@@ -65,7 +78,7 @@ htan_con <- function(
             c(
                 "No HTAN snapshot location is configured.",
                 i = "Pass `base_url`, or unset option HTAN.base_url to use",
-                i = sprintf("the default, %s.", .default_base_url)
+                i = sprintf("the default, %s.", htan_default_base_url())
             ),
             class = c("htan_error_no_base_url", "htan_error")
         )

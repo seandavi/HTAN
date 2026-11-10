@@ -48,6 +48,7 @@ reference:
   desc: Open, inspect and close the DuckDB connection over a release.
   contents:
   - htan_con
+  - htan_default_base_url
   - htan_disconnect
   - htan_snapshot_info
 - title: Query metadata

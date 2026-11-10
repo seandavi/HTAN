@@ -6,7 +6,7 @@
 \usage{
 htan_con(
   release = "r7",
-  base_url = getOption("HTAN.base_url", .default_base_url),
+  base_url = getOption("HTAN.base_url", htan_default_base_url()),
   cache = getOption("HTAN.cache", tools::R_user_dir("HTAN", "cache")),
   refresh = FALSE
 )
@@ -20,8 +20,8 @@ explicit, so results are reproducible.}
 \code{{release}}, that is replaced by \code{release} (the Hugging Face layout,
 where the release is a tag); otherwise the release is a subdirectory,
 \verb{<base_url>/<release>/manifest.json} (the layout \verb{just snapshot}
-writes). Defaults to \code{getOption("HTAN.base_url")}, then the Hugging
-Face dataset.}
+writes). Defaults to \code{getOption("HTAN.base_url")}, then
+\code{\link[=htan_default_base_url]{htan_default_base_url()}}, the Hugging Face dataset.}
 
 \item{cache}{\code{character(1)}. BiocFileCache directory for downloaded
 parquet files. Defaults to \code{getOption("HTAN.cache")}, then

@@ -2,6 +2,7 @@
 
 export(htan_columns)
 export(htan_con)
+export(htan_default_base_url)
 export(htan_disconnect)
 export(htan_download)
 export(htan_experiment)

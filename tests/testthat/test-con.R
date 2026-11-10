@@ -174,3 +174,10 @@ test_that("live: the Hugging Face r7 snapshot matches its manifest", {
     n <- dplyr::pull(dplyr::count(htan_files(con = con)))
     expect_equal(n, 221688)
 })
+
+test_that("htan_default_base_url() is the Hugging Face release URL", {
+    url <- htan_default_base_url()
+    expect_type(url, "character")
+    expect_length(url, 1L)
+    expect_match(url, "^https://huggingface\\.co/.*\\{release\\}$")
+})

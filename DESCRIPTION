@@ -1,7 +1,7 @@
 Package: HTAN
 Type: Package
 Title: Query and Retrieve Human Tumor Atlas Network (HTAN) Open-Access Data
-Version: 0.99.1
+Version: 0.99.2
 Authors@R:
   c(person(given = "Sean",
            family = "Davis",

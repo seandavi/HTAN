@@ -1,3 +1,8 @@
+# HTAN 0.99.2
+
+* New `htan_default_base_url()` returns the snapshot URL `htan_con()`
+  uses by default, so it is visible and checkable (#46).
+
 # HTAN 0.99.1
 
 * `htan_download()` no longer writes to the working directory by
