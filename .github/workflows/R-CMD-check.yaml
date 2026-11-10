@@ -1,5 +1,6 @@
 # R CMD check across Bioconductor devel/release and Linux/macOS/Windows,
-# BiocCheck on devel, and test coverage. Docs-only changes skip the checks.
+# BiocCheck on devel, test coverage, and Air formatting. Docs-only changes
+# skip the R checks.
 on:
   push:
     branches: [devel]
@@ -39,6 +40,19 @@ jobs:
               - 'NEWS.md'
               - '.Rbuildignore'
               - '.github/workflows/R-CMD-check.yaml'
+
+  # R code must be Air-formatted (air.toml). The pre-commit hook
+  # (`just hooks`) catches this locally; this is the backstop. Pin the
+  # version so CI and local formatting agree.
+  format:
+    runs-on: ubuntu-latest
+    name: air format
+    steps:
+      - uses: actions/checkout@v7
+      - uses: posit-dev/setup-air@v1
+        with:
+          version: "0.13.0"
+      - run: air format . --check
 
   # Linux legs run in the Bioconductor container: system libraries are
   # pre-installed and BiocManager installs container binaries. The R
@@ -172,14 +186,14 @@ jobs:
   # code PRs gate on both Linux legs and macOS.
   all-checks:
     if: always()
-    needs: [changes, bioc, cross-platform]
+    needs: [changes, format, bioc, cross-platform]
     runs-on: ubuntu-latest
     name: all-checks
     steps:
       - name: Required checks passed
         run: |
-          for r in "${{ needs.changes.result }}" "${{ needs.bioc.result }}" \
-              "${{ needs.cross-platform.result }}"; do
+          for r in "${{ needs.changes.result }}" "${{ needs.format.result }}" \
+              "${{ needs.bioc.result }}" "${{ needs.cross-platform.result }}"; do
             if [ "$r" = "failure" ] || [ "$r" = "cancelled" ]; then
               echo "::error::a required check did not pass"
               exit 1

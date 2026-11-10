@@ -14,6 +14,18 @@ default:
 document:
     Rscript -e 'roxygen2::roxygenise()'
 
+# Format R code with Air (air.toml)
+format:
+    air format .
+
+# Check formatting without changing files (what CI and the hook run)
+format-check:
+    air format . --check
+
+# Use the repo's git hooks (.githooks/pre-commit runs Air on staged R files)
+hooks:
+    git config core.hooksPath .githooks
+
 # Run the offline testthat suite
 test:
     Rscript -e 'devtools::test()'
