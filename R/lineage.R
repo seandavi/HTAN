@@ -37,17 +37,25 @@ htan_lineage <- function(
     direction <- match.arg(direction)
     ids <- .as_file_ids(ids)
     if (!length(ids)) {
-        rlang::abort("`ids` is empty.",
-            class = c("htan_error_bad_argument", "htan_error"))
+        rlang::abort(
+            "`ids` is empty.",
+            class = c("htan_error_bad_argument", "htan_error")
+        )
     }
     seed <- paste0("(", DBI::dbQuoteString(con, ids), ")", collapse = ", ")
-    walks <- switch(direction,
+    walks <- switch(
+        direction,
         ancestors = .walk_sql("up"),
         descendants = .walk_sql("down"),
         both = paste(.walk_sql("up"), "UNION", .walk_sql("down"))
     )
-    sql <- sprintf(.lineage_sql, seed, as.integer(max_depth),
-        as.integer(max_depth), walks)
+    sql <- sprintf(
+        .lineage_sql,
+        seed,
+        as.integer(max_depth),
+        as.integer(max_depth),
+        walks
+    )
     dplyr::tbl(con, dbplyr::sql(sql))
 }
 
@@ -114,16 +122,20 @@ GROUP BY w.query, w.file"
 .as_file_ids <- function(ids) {
     if (inherits(ids, c("tbl_lazy", "data.frame"))) {
         if (!"HTAN_Data_File_ID" %in% colnames(ids)) {
-            rlang::abort("`ids` has no `HTAN_Data_File_ID` column.",
-                class = c("htan_error_bad_argument", "htan_error"))
+            rlang::abort(
+                "`ids` has no `HTAN_Data_File_ID` column.",
+                class = c("htan_error_bad_argument", "htan_error")
+            )
         }
         ids <- ids |>
             dplyr::distinct(dplyr::pick("HTAN_Data_File_ID")) |>
             dplyr::pull()
     }
     if (!is.character(ids)) {
-        rlang::abort("`ids` must be character file IDs or a files table.",
-            class = c("htan_error_bad_argument", "htan_error"))
+        rlang::abort(
+            "`ids` must be character file IDs or a files table.",
+            class = c("htan_error_bad_argument", "htan_error")
+        )
     }
     unique(ids[!is.na(ids)])
 }

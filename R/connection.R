@@ -149,8 +149,11 @@ htan_snapshot_info <- function(con = htan_con()) {
 ## The directory (or URL prefix) holding one release's manifest and parquet.
 .release_location <- function(base_url, release) {
     if (grepl("{release}", base_url, fixed = TRUE)) {
-        return(sub("/+$", "", gsub("{release}", release, base_url,
-            fixed = TRUE)))
+        return(sub(
+            "/+$",
+            "",
+            gsub("{release}", release, base_url, fixed = TRUE)
+        ))
     }
     paste(sub("/+$", "", base_url), release, sep = "/")
 }
@@ -235,8 +238,11 @@ htan_snapshot_info <- function(con = htan_con()) {
         )
     }
     fields <- c("name", "file", "sha256")
-    ok <- vapply(manifest$tables, function(t) all(fields %in% names(t)),
-        logical(1))
+    ok <- vapply(
+        manifest$tables,
+        function(t) all(fields %in% names(t)),
+        logical(1)
+    )
     if (!all(ok)) {
         rlang::abort(
             "Every manifest table needs `name`, `file` and `sha256`.",
@@ -249,21 +255,29 @@ htan_snapshot_info <- function(con = htan_con()) {
 ## ---- parquet files -------------------------------------------------------
 
 .table_paths <- function(src, manifest, cache) {
-    paths <- vapply(manifest$tables, function(t) {
-        if (src$remote) {
-            .cached_parquet(paste(src$dir, t$file, sep = "/"), t$sha256, cache)
-        } else {
-            path <- file.path(src$dir, t$file)
-            if (!file.exists(path)) {
-                rlang::abort(
-                    sprintf("Snapshot file missing: %s", path),
-                    class = c("htan_error_snapshot_missing", "htan_error")
+    paths <- vapply(
+        manifest$tables,
+        function(t) {
+            if (src$remote) {
+                .cached_parquet(
+                    paste(src$dir, t$file, sep = "/"),
+                    t$sha256,
+                    cache
                 )
+            } else {
+                path <- file.path(src$dir, t$file)
+                if (!file.exists(path)) {
+                    rlang::abort(
+                        sprintf("Snapshot file missing: %s", path),
+                        class = c("htan_error_snapshot_missing", "htan_error")
+                    )
+                }
+                .check_sha256(path, t$sha256, t$name)
+                path
             }
-            .check_sha256(path, t$sha256, t$name)
-            path
-        }
-    }, character(1))
+        },
+        character(1)
+    )
     stats::setNames(paths, vapply(manifest$tables, `[[`, character(1), "name"))
 }
 
@@ -274,8 +288,11 @@ htan_snapshot_info <- function(con = htan_con()) {
     bfc <- .bfc(cache)
     rname <- paste0("sha256:", sha256)
     hit <- .bfc_hit(bfc, rname)
-    if (!is.null(hit) && file.exists(hit) &&
-        identical(unname(tools::sha256sum(hit)), sha256)) {
+    if (
+        !is.null(hit) &&
+            file.exists(hit) &&
+            identical(unname(tools::sha256sum(hit)), sha256)
+    ) {
         return(hit)
     }
     if (!is.null(hit)) {
@@ -288,8 +305,10 @@ htan_snapshot_info <- function(con = htan_con()) {
     path <- BiocFileCache::bfcnew(bfc, rname, ext = ".parquet")
     if (!file.copy(tmp, path, overwrite = TRUE)) {
         BiocFileCache::bfcremove(bfc, names(path))
-        rlang::abort(sprintf("Could not write %s to the cache.", path),
-            class = c("htan_error_cache", "htan_error"))
+        rlang::abort(
+            sprintf("Could not write %s to the cache.", path),
+            class = c("htan_error_cache", "htan_error")
+        )
     }
     path
 }
@@ -314,11 +333,14 @@ htan_snapshot_info <- function(con = htan_con()) {
 .open_duckdb <- function(manifest, paths) {
     con <- DBI::dbConnect(.duckdb_driver())
     for (name in names(paths)) {
-        DBI::dbExecute(con, sprintf(
-            "CREATE VIEW %s AS SELECT * FROM read_parquet(%s)",
-            DBI::dbQuoteIdentifier(con, name),
-            DBI::dbQuoteString(con, paths[[name]])
-        ))
+        DBI::dbExecute(
+            con,
+            sprintf(
+                "CREATE VIEW %s AS SELECT * FROM read_parquet(%s)",
+                DBI::dbQuoteIdentifier(con, name),
+                DBI::dbQuoteString(con, paths[[name]])
+            )
+        )
     }
     .write_meta(con, manifest)
     con
@@ -345,41 +367,60 @@ htan_snapshot_info <- function(con = htan_con()) {
         source_version = .field(manifest$tables, "source_version"),
         sha256 = .field(manifest$tables, "sha256")
     )
-    columns <- do.call(rbind, lapply(manifest$tables, function(t) {
-        if (!length(t$columns)) {
-            return(NULL)
-        }
-        data.frame(
-            table = t$name,
-            column = .field(t$columns, "name"),
-            type = .field(t$columns, "type"),
-            description = .field(t$columns, "description")
-        )
-    }))
+    columns <- do.call(
+        rbind,
+        lapply(manifest$tables, function(t) {
+            if (!length(t$columns)) {
+                return(NULL)
+            }
+            data.frame(
+                table = t$name,
+                column = .field(t$columns, "name"),
+                type = .field(t$columns, "type"),
+                description = .field(t$columns, "description")
+            )
+        })
+    )
     if (is.null(columns)) {
-        columns <- data.frame(table = character(), column = character(),
-            type = character(), description = character())
+        columns <- data.frame(
+            table = character(),
+            column = character(),
+            type = character(),
+            description = character()
+        )
     }
-    scalar <- vapply(manifest, function(x) is.atomic(x) && length(x) == 1L,
-        logical(1))
+    scalar <- vapply(
+        manifest,
+        function(x) is.atomic(x) && length(x) == 1L,
+        logical(1)
+    )
     info <- data.frame(
         key = names(manifest)[scalar],
         value = vapply(manifest[scalar], as.character, character(1))
     )
-    DBI::dbWriteTable(con, DBI::Id(schema = "htan_meta", table = "tables"),
-        tables)
-    DBI::dbWriteTable(con, DBI::Id(schema = "htan_meta", table = "columns"),
-        columns)
-    DBI::dbWriteTable(con, DBI::Id(schema = "htan_meta", table = "info"),
-        info)
+    DBI::dbWriteTable(
+        con,
+        DBI::Id(schema = "htan_meta", table = "tables"),
+        tables
+    )
+    DBI::dbWriteTable(
+        con,
+        DBI::Id(schema = "htan_meta", table = "columns"),
+        columns
+    )
+    DBI::dbWriteTable(con, DBI::Id(schema = "htan_meta", table = "info"), info)
     invisible(con)
 }
 
 .field <- function(xs, name, missing = NA_character_) {
-    vapply(xs, function(x) {
-        v <- x[[name]]
-        if (is.null(v)) missing else v
-    }, if (is.character(missing)) character(1) else numeric(1))
+    vapply(
+        xs,
+        function(x) {
+            v <- x[[name]]
+            if (is.null(v)) missing else v
+        },
+        if (is.character(missing)) character(1) else numeric(1)
+    )
 }
 
 ## ---- shared helpers ------------------------------------------------------
@@ -423,8 +464,10 @@ htan_snapshot_info <- function(con = htan_con()) {
 
 .check_string <- function(x, arg) {
     if (!is.character(x) || length(x) != 1L || is.na(x)) {
-        rlang::abort(sprintf("`%s` must be a single string.", arg),
-            class = c("htan_error_bad_argument", "htan_error"))
+        rlang::abort(
+            sprintf("`%s` must be a single string.", arg),
+            class = c("htan_error_bad_argument", "htan_error")
+        )
     }
     invisible(x)
 }

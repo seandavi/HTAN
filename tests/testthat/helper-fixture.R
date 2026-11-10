@@ -9,7 +9,8 @@ fixture_root <- function() {
 local_fixture_snapshot <- function(env = parent.frame()) {
     cache <- withr::local_tempdir(.local_envir = env)
     withr::local_options(
-        HTAN.base_url = fixture_root(), HTAN.cache = cache,
+        HTAN.base_url = fixture_root(),
+        HTAN.cache = cache,
         .local_envir = env
     )
     withr::defer(htan_disconnect(), envir = env)

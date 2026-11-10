@@ -80,51 +80,84 @@ htan_files <- function(con = htan_con()) {
 htan_file_participants <- function(con = htan_con()) {
     htan_tbl("id_provenance", con) |>
         dplyr::filter(!is.na(.data$HTAN_Participant_ID)) |>
-        dplyr::select(dplyr::all_of(c("HTAN_Data_File_ID",
-            "HTAN_Participant_ID"))) |>
+        dplyr::select(dplyr::all_of(c(
+            "HTAN_Data_File_ID",
+            "HTAN_Participant_ID"
+        ))) |>
         dplyr::distinct()
 }
 
 ## Columns every file table contributes; missing ones become typed NULLs.
 .file_columns <- c(
-    HTAN_Data_File_ID = "VARCHAR", Filename = "VARCHAR",
-    File_Format = "VARCHAR", File_Size = "BIGINT", md5 = "VARCHAR",
-    Component = "VARCHAR", entityId = "VARCHAR", HTAN_Center = "VARCHAR",
+    HTAN_Data_File_ID = "VARCHAR",
+    Filename = "VARCHAR",
+    File_Format = "VARCHAR",
+    File_Size = "BIGINT",
+    md5 = "VARCHAR",
+    Component = "VARCHAR",
+    entityId = "VARCHAR",
+    HTAN_Center = "VARCHAR",
     Data_Release = "VARCHAR"
 )
-.file_table_keys <- c("HTAN_Data_File_ID", "Filename", "File_Format",
-    "Component")
+.file_table_keys <- c(
+    "HTAN_Data_File_ID",
+    "Filename",
+    "File_Format",
+    "Component"
+)
 
 .file_tables <- function(con) {
-    cols <- DBI::dbGetQuery(con,
-        "SELECT \"table\", \"column\" FROM htan_meta.columns")
+    cols <- DBI::dbGetQuery(
+        con,
+        "SELECT \"table\", \"column\" FROM htan_meta.columns"
+    )
     by_table <- split(cols$column, cols$table)
-    keep <- vapply(by_table, function(x) all(.file_table_keys %in% x),
-        logical(1))
+    keep <- vapply(
+        by_table,
+        function(x) all(.file_table_keys %in% x),
+        logical(1)
+    )
     by_table[keep]
 }
 
 .files_sql <- function(con) {
     tables <- .file_tables(con)
     if (!length(tables)) {
-        rlang::abort("This snapshot has no file-level metadata tables.",
-            class = c("htan_error_bad_manifest", "htan_error"))
+        rlang::abort(
+            "This snapshot has no file-level metadata tables.",
+            class = c("htan_error_bad_manifest", "htan_error")
+        )
     }
     q <- function(x) as.character(DBI::dbQuoteIdentifier(con, x))
     rank <- .table_rank(con, names(tables))
-    selects <- vapply(names(tables), function(t) {
-        have <- tables[[t]]
-        exprs <- vapply(names(.file_columns), function(col) {
-            type <- .file_columns[[col]]
-            src <- if (col %in% have) q(col) else "NULL"
-            sprintf("CAST(%s AS %s) AS %s", src, type, q(col))
-        }, character(1))
-        sprintf("SELECT %s AS \"table\", %d AS table_rank, %s FROM %s",
-            DBI::dbQuoteString(con, t), rank[[t]],
-            paste(exprs, collapse = ", "), q(t))
-    }, character(1))
-    sprintf(.files_sql_template,
-        paste(selects, collapse = "\nUNION ALL\n"), .access_sql())
+    selects <- vapply(
+        names(tables),
+        function(t) {
+            have <- tables[[t]]
+            exprs <- vapply(
+                names(.file_columns),
+                function(col) {
+                    type <- .file_columns[[col]]
+                    src <- if (col %in% have) q(col) else "NULL"
+                    sprintf("CAST(%s AS %s) AS %s", src, type, q(col))
+                },
+                character(1)
+            )
+            sprintf(
+                "SELECT %s AS \"table\", %d AS table_rank, %s FROM %s",
+                DBI::dbQuoteString(con, t),
+                rank[[t]],
+                paste(exprs, collapse = ", "),
+                q(t)
+            )
+        },
+        character(1)
+    )
+    sprintf(
+        .files_sql_template,
+        paste(selects, collapse = "\nUNION ALL\n"),
+        .access_sql()
+    )
 }
 
 ## The union of file tables (`f0`, filled in by .files_sql()), deduplicated
@@ -175,15 +208,27 @@ SELECT *, %s AS access FROM j"
 ## Rank file tables newest source version first, so a file listed in more
 ## than one table is taken from the most recent release.
 .table_rank <- function(con, tables) {
-    meta <- DBI::dbGetQuery(con,
-        "SELECT name, source_version FROM htan_meta.tables")
+    meta <- DBI::dbGetQuery(
+        con,
+        "SELECT name, source_version FROM htan_meta.tables"
+    )
     meta <- meta[meta$name %in% tables, ]
-    m <- regmatches(meta$source_version,
-        regexec("^r([0-9]+)(?:_v([0-9]+))?$", meta$source_version))
-    score <- vapply(m, function(x) {
-        if (!length(x)) return(0)
-        as.numeric(x[2L]) * 100 + if (nzchar(x[3L])) as.numeric(x[3L]) else 1
-    }, numeric(1))
+    m <- regmatches(
+        meta$source_version,
+        regexec("^r([0-9]+)(?:_v([0-9]+))?$", meta$source_version)
+    )
+    score <- vapply(
+        m,
+        function(x) {
+            if (!length(x)) {
+                return(0)
+            }
+            as.numeric(x[2L]) *
+                100 +
+                if (nzchar(x[3L])) as.numeric(x[3L]) else 1
+        },
+        numeric(1)
+    )
     ord <- order(-score, meta$name)
     stats::setNames(as.list(seq_along(ord)), meta$name[ord])
 }

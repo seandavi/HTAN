@@ -77,12 +77,25 @@ htan_download <- function(
     rows <- lapply(seq_len(nrow(plan)), function(i) {
         f <- plan[i, ]
         got <- .download_one(f, bfc, dest, overwrite, token)
-        tibble::tibble(HTAN_Data_File_ID = f$HTAN_Data_File_ID,
-            access = f$access, path = got$path, status = got$status)
+        tibble::tibble(
+            HTAN_Data_File_ID = f$HTAN_Data_File_ID,
+            access = f$access,
+            path = got$path,
+            status = got$status
+        )
     })
-    do.call(rbind, c(list(tibble::tibble(HTAN_Data_File_ID = character(),
-        access = character(), path = character(), status = character())),
-        rows))
+    do.call(
+        rbind,
+        c(
+            list(tibble::tibble(
+                HTAN_Data_File_ID = character(),
+                access = character(),
+                path = character(),
+                status = character()
+            )),
+            rows
+        )
+    )
 }
 
 ## ---- cache ---------------------------------------------------------------
@@ -92,9 +105,13 @@ htan_download <- function(
 ## snapshot and are cleared or moved separately, and the snapshot cache
 ## stays private to R/connection.R.
 .download_cache_dir <- function() {
-    getOption("HTAN.download_cache", file.path(
-        getOption("HTAN.cache", tools::R_user_dir("HTAN", "cache")),
-        "downloads"))
+    getOption(
+        "HTAN.download_cache",
+        file.path(
+            getOption("HTAN.cache", tools::R_user_dir("HTAN", "cache")),
+            "downloads"
+        )
+    )
 }
 
 .file_rname <- function(f) {
@@ -106,8 +123,9 @@ htan_download <- function(
 ## cache (fetching into it if needed), copied on to `dest` if given.
 .download_one <- function(f, bfc, dest, overwrite, token) {
     out <- if (!is.null(dest)) .dest_path(dest, f$Filename)
-    if (!overwrite && !is.null(out) && file.exists(out) &&
-        .md5_ok(out, f$md5)) {
+    if (
+        !overwrite && !is.null(out) && file.exists(out) && .md5_ok(out, f$md5)
+    ) {
         return(list(path = out, status = "present"))
     }
     got <- .cached_file(f, bfc, overwrite, token)
@@ -116,8 +134,10 @@ htan_download <- function(
     }
     dir.create(dirname(out), recursive = TRUE, showWarnings = FALSE)
     if (!file.copy(got$path, out, overwrite = TRUE)) {
-        rlang::abort(sprintf("Could not copy %s to %s.", got$path, out),
-            class = c("htan_error_dest", "htan_error"))
+        rlang::abort(
+            sprintf("Could not copy %s to %s.", got$path, out),
+            class = c("htan_error_dest", "htan_error")
+        )
     }
     list(path = out, status = got$status)
 }
@@ -141,22 +161,35 @@ htan_download <- function(
     status <- "cached"
     if (overwrite || !file.exists(path) || !.md5_ok(path, f$md5)) {
         dir.create(dirname(path), recursive = TRUE, showWarnings = FALSE)
-        url <- switch(f$access,
+        url <- switch(
+            f$access,
             "open-gc" = .drs_access_url(f$drs_uri),
             "open-synapse" = .synapse_download_url(f$entityId, token)
         )
         .fetch_verified(url, path, f)
         status <- "downloaded"
     }
-    BiocFileCache::bfcadd(bfc, rname, fpath = path, rtype = "local",
-        action = "asis")
+    BiocFileCache::bfcadd(
+        bfc,
+        rname,
+        fpath = path,
+        rtype = "local",
+        action = "asis"
+    )
     list(path = path, status = status)
 }
 
 ## ---- planning ------------------------------------------------------------
 
-.download_columns <- c("HTAN_Data_File_ID", "Filename", "entityId",
-    "drs_uri", "access", "File_Size", "md5")
+.download_columns <- c(
+    "HTAN_Data_File_ID",
+    "Filename",
+    "entityId",
+    "drs_uri",
+    "access",
+    "File_Size",
+    "md5"
+)
 
 .download_plan <- function(files, con) {
     if (is.character(files)) {
@@ -167,8 +200,7 @@ htan_download <- function(
         missing <- setdiff(ids, plan$HTAN_Data_File_ID)
         if (length(missing)) {
             rlang::abort(
-                c("Unknown HTAN_Data_File_ID(s).",
-                    x = .some(missing)),
+                c("Unknown HTAN_Data_File_ID(s).", x = .some(missing)),
                 class = c("htan_error_unknown_file", "htan_error")
             )
         }
@@ -176,9 +208,11 @@ htan_download <- function(
         absent <- setdiff(.download_columns, colnames(files))
         if (length(absent)) {
             rlang::abort(
-                c("`files` is missing columns needed to download.",
+                c(
+                    "`files` is missing columns needed to download.",
                     x = paste(absent, collapse = ", "),
-                    i = "Pass the result of htan_files()."),
+                    i = "Pass the result of htan_files()."
+                ),
                 class = c("htan_error_bad_argument", "htan_error")
             )
         }
@@ -186,8 +220,10 @@ htan_download <- function(
             dplyr::select(dplyr::all_of(.download_columns)) |>
             dplyr::collect()
     } else {
-        rlang::abort("`files` must be htan_files() output or file IDs.",
-            class = c("htan_error_bad_argument", "htan_error"))
+        rlang::abort(
+            "`files` must be htan_files() output or file IDs.",
+            class = c("htan_error_bad_argument", "htan_error")
+        )
     }
     plan[!duplicated(plan$HTAN_Data_File_ID), ]
 }
@@ -199,8 +235,10 @@ htan_download <- function(
             c(
                 "Controlled-access files cannot be downloaded by HTAN.",
                 x = .some(controlled),
-                i = paste("Level 1/2 sequencing is under dbGaP phs002371;",
-                    "request access, then use the CRDC gen3-client."),
+                i = paste(
+                    "Level 1/2 sequencing is under dbGaP phs002371;",
+                    "request access, then use the CRDC gen3-client."
+                ),
                 i = "Drop them with `filter(access != \"controlled\")`."
             ),
             class = c("htan_error_controlled", "htan_error")
@@ -208,16 +246,24 @@ htan_download <- function(
     }
     unknown <- setdiff(plan$access, c("open-gc", "open-synapse"))
     if (length(unknown)) {
-        rlang::abort(sprintf("Unknown access tier(s): %s",
-            paste(unknown, collapse = ", ")),
-            class = c("htan_error_bad_argument", "htan_error"))
+        rlang::abort(
+            sprintf(
+                "Unknown access tier(s): %s",
+                paste(unknown, collapse = ", ")
+            ),
+            class = c("htan_error_bad_argument", "htan_error")
+        )
     }
     total <- sum(plan$File_Size, na.rm = TRUE)
     if (total > max_bytes) {
         rlang::abort(
             c(
-                sprintf("These %d files total %s, over `max_bytes` (%s).",
-                    nrow(plan), .fmt_bytes(total), .fmt_bytes(max_bytes)),
+                sprintf(
+                    "These %d files total %s, over `max_bytes` (%s).",
+                    nrow(plan),
+                    .fmt_bytes(total),
+                    .fmt_bytes(max_bytes)
+                ),
                 i = "Raise `max_bytes` or option HTAN.max_download_bytes."
             ),
             class = c("htan_error_too_large", "htan_error")
@@ -227,8 +273,10 @@ htan_download <- function(
         rlang::abort(
             c(
                 "Synapse files need a personal access token.",
-                i = paste("Create one at https://www.synapse.org",
-                    "(Account Settings > Personal Access Tokens)."),
+                i = paste(
+                    "Create one at https://www.synapse.org",
+                    "(Account Settings > Personal Access Tokens)."
+                ),
                 i = "Then set SYNAPSE_AUTH_TOKEN, e.g. in ~/.Renviron."
             ),
             class = c("htan_error_no_synapse_token", "htan_error")
@@ -243,8 +291,10 @@ htan_download <- function(
     parts <- strsplit(gsub("\\\\", "/", filename), "/", fixed = TRUE)[[1L]]
     parts <- parts[nzchar(parts) & parts != "."]
     if (!length(parts) || any(parts == "..")) {
-        rlang::abort(sprintf("Unsafe Filename: %s", filename),
-            class = c("htan_error_bad_argument", "htan_error"))
+        rlang::abort(
+            sprintf("Unsafe Filename: %s", filename),
+            class = c("htan_error_bad_argument", "htan_error")
+        )
     }
     do.call(file.path, as.list(c(dest, parts)))
 }
@@ -268,20 +318,26 @@ htan_download <- function(
     status <- httr2::resp_status(resp)
     if (status %in% c(401L, 403L)) {
         rlang::abort(
-            sprintf("DRS object %s is not open access (HTTP %d).", drs_uri,
-                status),
+            sprintf(
+                "DRS object %s is not open access (HTTP %d).",
+                drs_uri,
+                status
+            ),
             class = c("htan_error_controlled", "htan_error")
         )
     }
     if (status >= 400L) {
-        rlang::abort(sprintf("DRS lookup failed for %s (HTTP %d).",
-            drs_uri, status),
-            class = c("htan_error_drs", "htan_error"))
+        rlang::abort(
+            sprintf("DRS lookup failed for %s (HTTP %d).", drs_uri, status),
+            class = c("htan_error_drs", "htan_error")
+        )
     }
     url <- httr2::resp_body_json(resp)$url
     if (is.null(url)) {
-        rlang::abort(sprintf("DRS returned no URL for %s.", drs_uri),
-            class = c("htan_error_drs", "htan_error"))
+        rlang::abort(
+            sprintf("DRS returned no URL for %s.", drs_uri),
+            class = c("htan_error_drs", "htan_error")
+        )
     }
     url
 }
@@ -302,46 +358,62 @@ htan_download <- function(
 .synapse_check <- function(resp, what) {
     status <- httr2::resp_status(resp)
     if (status %in% c(401L, 403L)) {
-        reason <- tryCatch(httr2::resp_body_json(resp)$reason,
-            error = function(e) NULL)
+        reason <- tryCatch(
+            httr2::resp_body_json(resp)$reason,
+            error = function(e) NULL
+        )
         rlang::abort(
             c(
                 sprintf("Synapse refused %s (HTTP %d).", what, status),
                 x = reason,
-                i = paste("Check SYNAPSE_AUTH_TOKEN, and that your account",
-                    "has accepted the HTAN data terms of use.")
+                i = paste(
+                    "Check SYNAPSE_AUTH_TOKEN, and that your account",
+                    "has accepted the HTAN data terms of use."
+                )
             ),
             class = c("htan_error_synapse_auth", "htan_error")
         )
     }
     if (status >= 400L) {
-        rlang::abort(sprintf("Synapse request for %s failed (HTTP %d).",
-            what, status),
-            class = c("htan_error_synapse", "htan_error"))
+        rlang::abort(
+            sprintf("Synapse request for %s failed (HTTP %d).", what, status),
+            class = c("htan_error_synapse", "htan_error")
+        )
     }
     httr2::resp_body_json(resp)
 }
 
 ## Synapse REST: entity -> dataFileHandleId -> presigned URL.
 .synapse_download_url <- function(entity_id, token) {
-    entity <- .synapse_check(httr2::req_perform(
-        .synapse_request(token, "repo", "v1", "entity", entity_id)),
-        entity_id)
+    entity <- .synapse_check(
+        httr2::req_perform(
+            .synapse_request(token, "repo", "v1", "entity", entity_id)
+        ),
+        entity_id
+    )
     handle <- entity$dataFileHandleId
     if (is.null(handle)) {
-        rlang::abort(sprintf("%s is not a Synapse file entity.", entity_id),
-            class = c("htan_error_synapse", "htan_error"))
+        rlang::abort(
+            sprintf("%s is not a Synapse file entity.", entity_id),
+            class = c("htan_error_synapse", "htan_error")
+        )
     }
     body <- list(
-        requestedFiles = list(list(fileHandleId = handle,
+        requestedFiles = list(list(
+            fileHandleId = handle,
             associateObjectId = entity_id,
-            associateObjectType = "FileEntity")),
+            associateObjectType = "FileEntity"
+        )),
         includePreSignedURLs = TRUE,
         includeFileHandles = FALSE
     )
     req <- .synapse_request(token, "file", "v1", "fileHandle", "batch")
-    batch <- .synapse_check(httr2::req_perform(
-        httr2::req_body_json(req, body)), entity_id)
+    batch <- .synapse_check(
+        httr2::req_perform(
+            httr2::req_body_json(req, body)
+        ),
+        entity_id
+    )
     got <- batch$requestedFiles[[1L]]
     if (!is.null(got$failureCode) || is.null(got$preSignedURL)) {
         failure <- got$failureCode %||% "no URL returned"
@@ -350,8 +422,10 @@ htan_download <- function(
         } else {
             "htan_error_synapse"
         }
-        rlang::abort(sprintf("Synapse could not sign %s: %s", entity_id,
-            failure), class = c(cls, "htan_error"))
+        rlang::abort(
+            sprintf("Synapse could not sign %s: %s", entity_id, failure),
+            class = c(cls, "htan_error")
+        )
     }
     got$preSignedURL
 }
@@ -366,22 +440,27 @@ htan_download <- function(
         .perform_to_file(tmp)
     if (!.md5_ok(tmp, f$md5)) {
         rlang::abort(
-            c(sprintf("md5 mismatch for %s.", f$HTAN_Data_File_ID),
+            c(
+                sprintf("md5 mismatch for %s.", f$HTAN_Data_File_ID),
                 i = sprintf("expected %s", f$md5),
-                x = sprintf("got      %s", unname(tools::md5sum(tmp)))),
+                x = sprintf("got      %s", unname(tools::md5sum(tmp)))
+            ),
             class = c("htan_error_checksum", "htan_error")
         )
     }
     unlink(path)
     if (!file.rename(tmp, path)) {
-        rlang::abort(sprintf("Could not move the download to %s.", path),
-            class = c("htan_error_cache", "htan_error"))
+        rlang::abort(
+            sprintf("Could not move the download to %s.", path),
+            class = c("htan_error_cache", "htan_error")
+        )
     }
     invisible(path)
 }
 
 .md5_ok <- function(path, md5) {
-    is.na(md5) || !nzchar(md5) ||
+    is.na(md5) ||
+        !nzchar(md5) ||
         identical(unname(tools::md5sum(path)), tolower(md5))
 }
 
@@ -391,6 +470,5 @@ htan_download <- function(
 }
 
 .fmt_bytes <- function(x) {
-    format(structure(x, class = "object_size"), units = "auto",
-        standard = "SI")
+    format(structure(x, class = "object_size"), units = "auto", standard = "SI")
 }

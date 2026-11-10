@@ -65,13 +65,18 @@ htan_experiment <- function(x, participant_col = NULL, con = htan_con()) {
 }
 
 .check_experiments <- function(x) {
-    ok <- is.list(x) && length(x) && !is.null(names(x)) &&
-        all(nzchar(names(x))) && !anyDuplicated(names(x)) &&
+    ok <- is.list(x) &&
+        length(x) &&
+        !is.null(names(x)) &&
+        all(nzchar(names(x))) &&
+        !anyDuplicated(names(x)) &&
         all(vapply(x, methods::is, logical(1), "SummarizedExperiment"))
     if (!ok) {
         rlang::abort(
-            c("`x` must be a uniquely named list of SummarizedExperiments.",
-                i = "Names are the HTAN_Data_File_IDs the objects came from."),
+            c(
+                "`x` must be a uniquely named list of SummarizedExperiments.",
+                i = "Names are the HTAN_Data_File_IDs the objects came from."
+            ),
             class = c("htan_error_bad_argument", "htan_error")
         )
     }
@@ -85,8 +90,10 @@ htan_experiment <- function(x, participant_col = NULL, con = htan_con()) {
     unknown <- setdiff(ids, prov$HTAN_Data_File_ID)
     if (length(unknown)) {
         rlang::abort(
-            c("No participants recorded for these files in id_provenance.",
-                x = .some(unknown)),
+            c(
+                "No participants recorded for these files in id_provenance.",
+                x = .some(unknown)
+            ),
             class = c("htan_error_unknown_file", "htan_error")
         )
     }
@@ -101,8 +108,10 @@ htan_experiment <- function(x, participant_col = NULL, con = htan_con()) {
 .sample_map <- function(id, obj, owners, participant_col) {
     cols <- colnames(obj)
     if (is.null(cols)) {
-        rlang::abort(sprintf("Experiment %s has no colnames.", id),
-            class = c("htan_error_bad_argument", "htan_error"))
+        rlang::abort(
+            sprintf("Experiment %s has no colnames.", id),
+            class = c("htan_error_bad_argument", "htan_error")
+        )
     }
     if (length(owners) == 1L) {
         primary <- rep(owners, length(cols))
@@ -110,12 +119,19 @@ htan_experiment <- function(x, participant_col = NULL, con = htan_con()) {
         cd <- SummarizedExperiment::colData(obj)
         if (is.null(participant_col) || !participant_col %in% names(cd)) {
             rlang::abort(
-                c(sprintf("%s comes from %d participants.", id,
-                    length(owners)),
-                    i = paste("Pass `participant_col`, the colData column",
+                c(
+                    sprintf(
+                        "%s comes from %d participants.",
+                        id,
+                        length(owners)
+                    ),
+                    i = paste(
+                        "Pass `participant_col`, the colData column",
                         "holding each column's participant or biospecimen",
-                        "ID."),
-                    i = sprintf("Participants: %s", .some(owners))),
+                        "ID."
+                    ),
+                    i = sprintf("Participants: %s", .some(owners))
+                ),
                 class = c("htan_error_ambiguous_participant", "htan_error")
             )
         }
@@ -123,10 +139,16 @@ htan_experiment <- function(x, participant_col = NULL, con = htan_con()) {
         bad <- !primary %in% owners
         if (any(bad)) {
             rlang::abort(
-                c(sprintf("`%s` has values that are not participants of %s.",
-                    participant_col, id),
+                c(
+                    sprintf(
+                        "`%s` has values that are not participants of %s.",
+                        participant_col,
+                        id
+                    ),
                     x = .some(unique(as.character(
-                        cd[[participant_col]][bad])))),
+                        cd[[participant_col]][bad]
+                    )))
+                ),
                 class = c("htan_error_ambiguous_participant", "htan_error")
             )
         }
@@ -135,8 +157,14 @@ htan_experiment <- function(x, participant_col = NULL, con = htan_con()) {
 }
 
 ## Columns that describe the submission, not the participant.
-.admin_columns <- c("Component", "entityId", "Id", "Manifest_Id",
-    "Manifest_Version", "HTAN_Center")
+.admin_columns <- c(
+    "Component",
+    "entityId",
+    "Id",
+    "Manifest_Id",
+    "Manifest_Version",
+    "HTAN_Center"
+)
 
 .participant_coldata <- function(participants, con) {
     ## One row per participant: the first by ID order, as recorded.
@@ -152,12 +180,17 @@ htan_experiment <- function(x, participant_col = NULL, con = htan_con()) {
     ## Diagnosis columns that clash with demographics get a prefix.
     dx <- first_row("clinical_tier1_diagnosis") |>
         dplyr::select(!dplyr::any_of(.admin_columns)) |>
-        dplyr::rename_with(function(x) sprintf("diagnosis_%s", x),
-            dplyr::any_of(setdiff(names(demo), "HTAN_Participant_ID")))
+        dplyr::rename_with(
+            function(x) sprintf("diagnosis_%s", x),
+            dplyr::any_of(setdiff(names(demo), "HTAN_Participant_ID"))
+        )
     cd <- data.frame(HTAN_Participant_ID = participants) |>
         dplyr::left_join(demo, by = "HTAN_Participant_ID") |>
         dplyr::left_join(dx, by = "HTAN_Participant_ID") |>
         as.data.frame()
-    S4Vectors::DataFrame(cd, row.names = cd$HTAN_Participant_ID,
-        check.names = FALSE)
+    S4Vectors::DataFrame(
+        cd,
+        row.names = cd$HTAN_Participant_ID,
+        check.names = FALSE
+    )
 }

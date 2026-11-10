@@ -29,6 +29,8 @@ test_that("htan_lineage() validates ids", {
     local_fixture_snapshot()
     expect_error(htan_lineage(character()), class = "htan_error_bad_argument")
     expect_error(htan_lineage(1), class = "htan_error_bad_argument")
-    expect_error(htan_lineage(data.frame(x = 1)),
-        class = "htan_error_bad_argument")
+    expect_error(
+        htan_lineage(data.frame(x = 1)),
+        class = "htan_error_bad_argument"
+    )
 })
