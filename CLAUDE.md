@@ -59,6 +59,7 @@ Dev tasks live in the `justfile` (not a Makefile):
 
 ```sh
 just document   # roxygen2: regenerate man/ and NAMESPACE (never hand-edit them)
+just format     # Air: format R code (`just hooks` enables the pre-commit check)
 just test       # testthat, offline
 just check      # R CMD build + R CMD check
 just bioccheck  # BiocCheck
@@ -81,8 +82,9 @@ inline R, never by hand. `analysis-workflow` gates its Synapse chunks on
 (Bioconductor builders, fork PRs) they are shown without output, so prose
 that quotes their results goes through `result(value, otherwise)` and
 must read correctly either way. CI passes the read-only token from the
-repo secret. Attach Bioconductor packages before dplyr, or their
-`count()`/`desc()`/`slice()` mask dplyr's.
+repo secret. Vignettes call dplyr with `dplyr::` prefixes, so the
+Bioconductor packages that mask `count()`/`desc()`/`slice()` cannot change
+what a chunk does.
 
 ## Tests
 
@@ -121,7 +123,17 @@ release to the Hugging Face dataset (upload, then tag) is a manual step
 
 - Branches and PRs into `devel` (the Bioconductor-style default branch).
 - Small commits; NEWS.md entry for user-visible changes.
-- Bioconductor style: 4-space indent, lines under 80 characters, no
-  `T`/`F`, `vapply` over `sapply`.
+- Style (details and examples in CONTRIBUTING.md, "Style"):
+  - Air formats all R code (`air.toml`: 4-space indent, 80 columns). Run
+    `just format` before committing; the pre-commit hook (`just hooks`) and
+    CI run `air format . --check`. Air skips `.qmd` chunks: format those by
+    hand to match.
+  - Chains of steps on one object (dplyr verbs, httr2 requests) are `|>`
+    pipelines, one step per line. No nested dplyr calls, no `%>%`, no
+    `x <- f(x); x <- g(x)`. Reassignment only for argument normalization,
+    a branch-only step, or base-R replacement (`x[i] <-`).
+  - `pkg::fun()` prefixes everywhere, vignettes and tests included; `.data$`
+    for columns in `R/`.
+  - No `T`/`F`, `vapply` over `sapply`.
 - Mark anything not verified against real HTAN data as unverified in code
   comments or PR descriptions.
