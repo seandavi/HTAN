@@ -159,6 +159,10 @@ read_htan <- function(x, coords = NULL, ...) {
 
 ## ---- legacy (pre-0.8) h5ad ----------------------------------------------
 ##
+## Temporary. anndataR cannot read this layout yet
+## (https://github.com/scverse/anndataR/issues/134); once it can, delete
+## this section and the .h5ad_is_legacy() branch in .read_h5ad() (#43).
+##
 ## anndata < 0.8 wrote no `encoding-type`/`encoding-version` on the root
 ## group (anndataR's own validity test), and stored categoricals as integer
 ## codes whose `categories` attribute is an object reference into
