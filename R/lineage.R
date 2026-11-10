@@ -117,8 +117,9 @@ GROUP BY w.query, w.file"
             rlang::abort("`ids` has no `HTAN_Data_File_ID` column.",
                 class = c("htan_error_bad_argument", "htan_error"))
         }
-        ids <- dplyr::pull(dplyr::distinct(dplyr::select(ids,
-            "HTAN_Data_File_ID")))
+        ids <- ids |>
+            dplyr::distinct(dplyr::pick("HTAN_Data_File_ID")) |>
+            dplyr::pull()
     }
     if (!is.character(ids)) {
         rlang::abort("`ids` must be character file IDs or a files table.",

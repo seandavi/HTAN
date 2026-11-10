@@ -182,8 +182,9 @@ htan_download <- function(
                 class = c("htan_error_bad_argument", "htan_error")
             )
         }
-        plan <- dplyr::collect(dplyr::select(files,
-            dplyr::all_of(.download_columns)))
+        plan <- files |>
+            dplyr::select(dplyr::all_of(.download_columns)) |>
+            dplyr::collect()
     } else {
         rlang::abort("`files` must be htan_files() output or file IDs.",
             class = c("htan_error_bad_argument", "htan_error"))
@@ -257,13 +258,13 @@ htan_download <- function(
 ## Anonymous DRS: GET .../objects/<id>/access/s3 returns {"url": presigned}.
 .drs_access_url <- function(drs_uri) {
     id <- sub("^drs://([^/]+/)?", "", drs_uri)
-    req <- httr2::request(.drs_host())
-    req <- httr2::req_url_path_append(req, "ga4gh", "drs", "v1", "objects")
-    req <- httr2::req_url_path_append(req, id, "access", "s3")
-    req <- httr2::req_user_agent(req, .user_agent())
-    req <- httr2::req_retry(req, max_tries = 3L)
-    req <- httr2::req_error(req, is_error = function(resp) FALSE)
-    resp <- httr2::req_perform(req)
+    resp <- httr2::request(.drs_host()) |>
+        httr2::req_url_path_append("ga4gh", "drs", "v1", "objects") |>
+        httr2::req_url_path_append(id, "access", "s3") |>
+        httr2::req_user_agent(.user_agent()) |>
+        httr2::req_retry(max_tries = 3L) |>
+        httr2::req_error(is_error = function(resp) FALSE) |>
+        httr2::req_perform()
     status <- httr2::resp_status(resp)
     if (status %in% c(401L, 403L)) {
         rlang::abort(
@@ -290,12 +291,12 @@ htan_download <- function(
 }
 
 .synapse_request <- function(token, ...) {
-    req <- httr2::request(.synapse_host())
-    req <- httr2::req_url_path_append(req, ...)
-    req <- httr2::req_auth_bearer_token(req, token)
-    req <- httr2::req_user_agent(req, .user_agent())
-    req <- httr2::req_retry(req, max_tries = 3L)
-    httr2::req_error(req, is_error = function(resp) FALSE)
+    httr2::request(.synapse_host()) |>
+        httr2::req_url_path_append(...) |>
+        httr2::req_auth_bearer_token(token) |>
+        httr2::req_user_agent(.user_agent()) |>
+        httr2::req_retry(max_tries = 3L) |>
+        httr2::req_error(is_error = function(resp) FALSE)
 }
 
 .synapse_check <- function(resp, what) {
@@ -359,9 +360,10 @@ htan_download <- function(
 .fetch_verified <- function(url, path, f) {
     tmp <- paste0(path, ".part")
     on.exit(unlink(tmp), add = TRUE)
-    req <- httr2::req_user_agent(httr2::request(url), .user_agent())
-    req <- httr2::req_retry(req, max_tries = 3L)
-    .perform_to_file(req, tmp)
+    httr2::request(url) |>
+        httr2::req_user_agent(.user_agent()) |>
+        httr2::req_retry(max_tries = 3L) |>
+        .perform_to_file(tmp)
     if (!.md5_ok(tmp, f$md5)) {
         rlang::abort(
             c(sprintf("md5 mismatch for %s.", f$HTAN_Data_File_ID),

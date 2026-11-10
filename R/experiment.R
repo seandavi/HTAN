@@ -79,11 +79,9 @@ htan_experiment <- function(x, participant_col = NULL, con = htan_con()) {
 }
 
 .file_participants <- function(ids, con) {
-    prov <- dplyr::collect(dplyr::distinct(dplyr::select(dplyr::filter(
-        htan_tbl("id_provenance", con),
-        .data$HTAN_Data_File_ID %in% !!ids,
-        !is.na(.data$HTAN_Participant_ID)),
-        "HTAN_Data_File_ID", "HTAN_Participant_ID")))
+    prov <- htan_file_participants(con) |>
+        dplyr::filter(.data$HTAN_Data_File_ID %in% !!ids) |>
+        dplyr::collect()
     unknown <- setdiff(ids, prov$HTAN_Data_File_ID)
     if (length(unknown)) {
         rlang::abort(
@@ -141,23 +139,25 @@ htan_experiment <- function(x, participant_col = NULL, con = htan_con()) {
     "Manifest_Version", "HTAN_Center")
 
 .participant_coldata <- function(participants, con) {
+    ## One row per participant: the first by ID order, as recorded.
     first_row <- function(name) {
-        tbl <- dplyr::collect(dplyr::filter(htan_tbl(name, con),
-            .data$HTAN_Participant_ID %in% !!participants))
-        tbl <- tbl[order(tbl$HTAN_Participant_ID), , drop = FALSE]
-        tbl[!duplicated(tbl$HTAN_Participant_ID), , drop = FALSE]
+        htan_tbl(name, con) |>
+            dplyr::filter(.data$HTAN_Participant_ID %in% !!participants) |>
+            dplyr::collect() |>
+            dplyr::arrange(.data$HTAN_Participant_ID) |>
+            dplyr::distinct(.data$HTAN_Participant_ID, .keep_all = TRUE)
     }
-    demo <- first_row("clinical_tier1_demographics")
-    keep <- setdiff(names(demo), setdiff(.admin_columns, "HTAN_Center"))
-    demo <- demo[keep]
-    dx <- first_row("clinical_tier1_diagnosis")
-    dx <- dx[setdiff(names(dx), .admin_columns)]
-    dup <- setdiff(intersect(names(dx), names(demo)), "HTAN_Participant_ID")
-    names(dx)[match(dup, names(dx))] <- paste0("diagnosis_", dup)
-    cd <- merge(data.frame(HTAN_Participant_ID = participants), demo,
-        by = "HTAN_Participant_ID", all.x = TRUE)
-    cd <- merge(cd, dx, by = "HTAN_Participant_ID", all.x = TRUE)
-    cd <- cd[match(participants, cd$HTAN_Participant_ID), , drop = FALSE]
-    rownames(cd) <- cd$HTAN_Participant_ID
-    S4Vectors::DataFrame(cd, check.names = FALSE)
+    demo <- first_row("clinical_tier1_demographics") |>
+        dplyr::select(!dplyr::any_of(setdiff(.admin_columns, "HTAN_Center")))
+    ## Diagnosis columns that clash with demographics get a prefix.
+    dx <- first_row("clinical_tier1_diagnosis") |>
+        dplyr::select(!dplyr::any_of(.admin_columns)) |>
+        dplyr::rename_with(function(x) sprintf("diagnosis_%s", x),
+            dplyr::any_of(setdiff(names(demo), "HTAN_Participant_ID")))
+    cd <- data.frame(HTAN_Participant_ID = participants) |>
+        dplyr::left_join(demo, by = "HTAN_Participant_ID") |>
+        dplyr::left_join(dx, by = "HTAN_Participant_ID") |>
+        as.data.frame()
+    S4Vectors::DataFrame(cd, row.names = cd$HTAN_Participant_ID,
+        check.names = FALSE)
 }

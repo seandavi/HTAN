@@ -401,9 +401,9 @@ htan_snapshot_info <- function(con = htan_con()) {
 }
 
 .htan_request <- function(url) {
-    req <- httr2::request(url)
-    req <- httr2::req_user_agent(req, .user_agent())
-    httr2::req_retry(req, max_tries = 3L)
+    httr2::request(url) |>
+        httr2::req_user_agent(.user_agent()) |>
+        httr2::req_retry(max_tries = 3L)
 }
 
 .user_agent <- function() {
