@@ -55,6 +55,7 @@ Suggests:
     scales,
     scater,
     scrapper,
+    Seurat,
     SeuratObject,
     TENxIO,
     tidyr,

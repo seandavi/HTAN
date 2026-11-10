@@ -58,7 +58,7 @@ test_that(".rds and .RData pass SummarizedExperiments through", {
 })
 
 test_that("Seurat objects convert to SingleCellExperiment", {
-    skip_if_not_installed("SeuratObject")
+    skip_if_not_installed("Seurat")
     counts <- Matrix::Matrix(matrix(rpois(60, 3), 10,
         dimnames = list(paste0("g", 1:10), paste0("c", 1:6))),
         sparse = TRUE)

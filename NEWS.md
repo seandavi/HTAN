@@ -2,6 +2,10 @@
 
 * New `htan_default_base_url()` returns the snapshot URL `htan_con()`
   uses by default, so it is visible and checkable (#46).
+* `read_htan()` converts Seurat objects with
+  `Seurat::as.SingleCellExperiment()` in place of the package's own
+  converter. Seurat is now in Suggests; reading a Seurat object without it
+  installed is an error that says how to install it (#44).
 
 # HTAN 0.99.1
 

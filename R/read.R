@@ -13,8 +13,8 @@
 #'     [make.unique()], with a message.}
 #'   \item{`.rds`, `.rda`, `.RData`}{Read, then: `SingleCellExperiment` and
 #'     other `SummarizedExperiment`s pass through; a Seurat object is
-#'     converted with SeuratObject (counts, data, metadata, reductions, and
-#'     tissue coordinates when present). Anything else is returned as is,
+#'     converted with `Seurat::as.SingleCellExperiment()` (assays, metadata
+#'     and reductions), plus tissue coordinates when present. Anything else is returned as is,
 #'     with a message.}
 #'   \item{`.h5` (10x)}{`TENxIO::TENxH5()` to a `SingleCellExperiment`.}
 #'   \item{a Space Ranger `outs/` directory}{`VisiumIO::TENxVisium()` to a
@@ -395,44 +395,23 @@ read_htan <- function(x, coords = NULL, ...) {
     obj
 }
 
-## Seurat -> SingleCellExperiment with SeuratObject only (no Seurat
-## dependency). Unverified against HTAN's Level 4 .rds files, whose Seurat
+## Seurat -> SingleCellExperiment with Seurat's own converter (Seurat is in
+## Suggests). Unverified against HTAN's Level 4 .rds files, whose Seurat
 ## versions vary by center.
 .seurat_to_sce <- function(obj) {
-    .need("SeuratObject", "Seurat objects")
+    .need("Seurat", "Seurat objects")
     obj <- tryCatch(SeuratObject::UpdateSeuratObject(obj),
         error = function(e) obj)
-    assay <- SeuratObject::DefaultAssay(obj)
-    ## Ask only for layers that exist: LayerData() warns "Layer '...' is
-    ## empty" for a missing one (e.g. `data` in a fresh v5 assay).
-    have <- tryCatch(SeuratObject::Layers(obj, assay = assay),
-        error = function(e) character())
-    layer <- function(name) {
-        if (!name %in% have) {
-            return(NULL)
+    ## A v5 assay often lacks `data` or `scale.data`; the converter warns
+    ## "Layer '...' is empty" for each, which says nothing about the result.
+    sce <- withCallingHandlers(
+        Seurat::as.SingleCellExperiment(obj),
+        warning = function(w) {
+            if (grepl("^Layer .* is empty", conditionMessage(w))) {
+                invokeRestart("muffleWarning")
+            }
         }
-        m <- tryCatch(
-            SeuratObject::LayerData(obj, assay = assay, layer = name),
-            error = function(e) NULL)
-        if (is.null(m) || !all(dim(m) == dim(obj[[assay]]))) NULL else m
-    }
-    assays <- Filter(Negate(is.null),
-        list(counts = layer("counts"), logcounts = layer("data")))
-    if (!length(assays)) {
-        rlang::abort("This Seurat object has no counts or data layer.",
-            class = c("htan_error_unsupported_format", "htan_error"))
-    }
-    meta <- obj[[]]
-    sce <- SingleCellExperiment::SingleCellExperiment(
-        assays = assays,
-        colData = S4Vectors::DataFrame(meta[colnames(assays[[1L]]), ,
-            drop = FALSE], check.names = FALSE)
     )
-    for (r in SeuratObject::Reductions(obj)) {
-        SingleCellExperiment::reducedDim(sce, toupper(r)) <-
-            SeuratObject::Embeddings(obj, reduction = r)[colnames(sce), ,
-                drop = FALSE]
-    }
     .seurat_spatial(obj, sce)
 }
 
