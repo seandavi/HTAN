@@ -726,7 +726,8 @@ cluster_summary <- tibble::tibble(
     median_genes = per_cluster(spe$detected),
     multicopy_share = round(
         per_cluster(
-            colSums(SingleCellExperiment::counts(spe)[multicopy, ]) / spe$sum
+            Matrix::colSums(SingleCellExperiment::counts(spe)[multicopy, ]) /
+                spe$sum
         ),
         2
     ),
