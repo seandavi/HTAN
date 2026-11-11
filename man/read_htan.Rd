@@ -38,9 +38,9 @@ not \code{uns}. Duplicated \code{obs} or \code{var} names are made unique with
 \code{\link[=make.unique]{make.unique()}}, with a message.}
 \item{\code{.rds}, \code{.rda}, \code{.RData}}{Read, then: \code{SingleCellExperiment} and
 other \code{SummarizedExperiment}s pass through; a Seurat object is
-converted with SeuratObject (counts, data, metadata, reductions, and
-tissue coordinates when present). Anything else is returned as is,
-with a message.}
+converted with \code{Seurat::as.SingleCellExperiment()} (assays, metadata
+and reductions), plus tissue coordinates when present. Anything
+else is returned as is, with a message.}
 \item{\code{.h5} (10x)}{\code{TENxIO::TENxH5()} to a \code{SingleCellExperiment}.}
 \item{a Space Ranger \verb{outs/} directory}{\code{VisiumIO::TENxVisium()} to a
 \code{SpatialExperiment}.}

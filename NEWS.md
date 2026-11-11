@@ -1,3 +1,31 @@
+# HTAN 0.99.2
+
+* New `htan_default_base_url()` returns the snapshot URL `htan_con()`
+  uses by default, so it is visible and checkable (#46).
+* `read_htan()` converts Seurat objects with
+  `Seurat::as.SingleCellExperiment()` in place of the package's own
+  converter. Seurat is now in Suggests; reading a Seurat object without it
+  installed is an error that says how to install it (#44).
+* Breaking: `htan_files()` takes only `con`. Filter its result with
+  `dplyr::filter()` instead of passing conditions to it, and select files by
+  participant with the new `htan_file_participants()`, one row per file and
+  participant, joined with `dplyr::semi_join()`. This replaces the
+  `participants` argument and, unlike `==` on the comma-separated
+  `HTAN_Participant_ID` column, finds files pooled from several
+  participants. `htan_files()` stays one row per file (#45).
+* `read_htan()` no longer fails with "no method or default for coercing
+  SingleCellExperiment to SpatialExperiment" when reading a spatial
+  `.h5ad` or Seurat object in a session where SpatialExperiment is not
+  yet loaded (#49).
+* The atlas-overview vignette no longer counts files without a recorded
+  participant as one extra participant: Release 7 has 2,415 participants
+  with released files, not 2,416 (#45).
+* Vignettes call every non-HTAN function with its namespace
+  (`dplyr::filter()`, `SummarizedExperiment::colData()`) and attach only
+  HTAN, so attach order no longer matters. The package's code style
+  (Air formatting, `|>` pipelines, `pkg::` prefixes) is documented in
+  CONTRIBUTING.md (#48).
+
 # HTAN 0.99.1
 
 * `htan_download()` no longer writes to the working directory by

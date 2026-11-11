@@ -40,7 +40,8 @@ file), or both.
 \examples{
 fixture <- system.file("extdata", "snapshot", package = "HTAN")
 con <- htan_con("r7", base_url = fixture)
-l4 <- htan_files(assay == "ScRNA-seq", level == 4, con = con)
+l4 <- htan_files(con) |>
+    dplyr::filter(assay == "ScRNA-seq", level == 4)
 htan_lineage(l4, con = con)
 
 }

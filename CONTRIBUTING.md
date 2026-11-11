@@ -28,17 +28,22 @@ Good starting points carry the `good first issue` or `help wanted` labels.
 You need R (>= 4.6, Bioconductor devel), [`just`](https://just.systems) and,
 only for the snapshot builder, [`uv`](https://docs.astral.sh/uv/).
 
+You also need [Air](https://posit-dev.github.io/air/cli.html), the R
+formatter (`brew install air`, or see its install page).
+
 ```sh
 git clone https://github.com/seandavi/HTAN
 cd HTAN
 Rscript -e 'BiocManager::install(c("devtools", "BiocCheck"))'
 Rscript -e 'devtools::install_deps(dependencies = TRUE)'
+just hooks             # enable the pre-commit hook (Air formatting)
 ```
 
 Dev tasks live in the `justfile` (`just --list` shows them all):
 
 ```sh
 just document          # roxygen2: regenerate man/ and NAMESPACE
+just format            # format R code with Air
 just test              # offline testthat suite
 just test-integration  # live tests (see below)
 just check             # R CMD build + R CMD check
@@ -114,10 +119,52 @@ write a new one that says so and leave the old one as it is.
 
 ## Style
 
-Bioconductor style: 4-space indent, lines under 80 characters, `TRUE`/`FALSE`
-not `T`/`F`, `vapply()` over `sapply()`. Network calls go through `httr2`.
-Errors are classed (`rlang::abort(class = "htan_error_*")`). Optional readers
-live in `Suggests` behind `requireNamespace()` with an actionable error.
+The package follows the [Bioconductor coding
+style](https://contributions.bioconductor.org/r-code.html#r-code-coding-style)
+and adds a few rules of its own, so the same idea is written the same way
+everywhere.
+
+**Layout is Air's job.** [Air](https://posit-dev.github.io/air/) formats
+all R code with the settings in `air.toml` (4-space indent, 80 columns):
+the `.R` files, and the R chunks of the vignettes through `dev/air-qmd.R`
+(Air itself reads only `.R` files). Do not hand-format, and do not fight
+the formatter. Run `just format` before committing. The pre-commit hook
+(`just hooks`) refuses a commit whose staged R files or vignettes are not
+formatted, and CI runs the same check (`just format-check`). Air does not
+split long strings; where a hand layout reads better, as in a table of
+long labels, put `# fmt: skip` on the line above the expression.
+
+**Chains use the native pipe.** A sequence of steps on one object, such as
+dplyr verbs or an httr2 request, is a `|>` pipeline with one step per line:
+
+```r
+htan_file_participants(con) |>
+    dplyr::filter(.data$HTAN_Data_File_ID %in% !!ids) |>
+    dplyr::collect()
+```
+
+Do not nest such calls (`dplyr::collect(dplyr::filter(...))`), do not use
+magrittr's `%>%`, and do not build the result by overwriting a variable
+step by step (`req <- f(req); req <- g(req)`). Reassignment is fine for
+normalizing arguments at the top of a function
+(`direction <- match.arg(direction)`), for a step taken only on some branch
+(`if (...) x <- dplyr::filter(x, ...)`), and for base-R replacement
+(`x[i] <- ...`, `dim(x) <- ...`). Short nested base-R calls such as
+`as.integer(length(x))` are fine.
+
+**Namespace prefixes everywhere.** Call functions from other packages as
+`pkg::fun()`, in `R/`, tests, examples and vignettes alike, for example
+`dplyr::filter()`. It makes every dependency visible where it is used, and
+it sidesteps masking (several Bioconductor packages export their own
+`count()`, `desc()` and `slice()`). Base R and the package's own functions
+need no prefix; in `R/`, refer to columns with the `.data` pronoun.
+
+**The rest.** `TRUE`/`FALSE`, not `T`/`F`; `vapply()` over `sapply()`.
+Exported functions are named `htan_*()` and internal helpers start with a
+dot. Network calls go through `httr2`. Errors are classed
+(`rlang::abort(class = "htan_error_*")`). Optional readers live in
+`Suggests` behind `requireNamespace()` with an actionable error, following
+[R Packages](https://r-pkgs.org/dependencies-in-practice.html#sec-dependencies-in-suggests-r-code).
 
 ## NEWS and versioning
 
@@ -126,8 +173,8 @@ complete sentence from the user's point of view, function names in
 backticks, ending with the PR number (`(#NN)`). Skip NEWS for CI-only or
 internal changes.
 
-Bump the `z` in `Version: x.y.z` and the `Date:` in `DESCRIPTION` on code PRs
-(the Bioconductor convention). Changes to build-excluded files (anything in
+Bump the `z` in `Version: x.y.z` in `DESCRIPTION` on code PRs (the
+Bioconductor convention). There is no `Date:` field; `R CMD build` adds it. Changes to build-excluded files (anything in
 `.Rbuildignore`, such as `.github/`, `adr/` or this file) need no bump.
 
 ## Pull request checklist
@@ -138,6 +185,8 @@ The PR template carries this list; it is the contract.
 - Tests cover the change and the offline suite passes (`just test`).
 - `just document` was run if roxygen changed, and `man/` and `NAMESPACE` are
   committed.
+- R code is formatted with Air (`just format`) and follows the style rules
+  above.
 - `just check` and `just bioccheck` are clean, or the CI legs are green.
 - `NEWS.md` and the version are updated where they apply.
 - An ADR is added for a non-trivial design decision.

@@ -14,7 +14,8 @@ Fixes #
 - [ ] **Tests**: added or updated tests; `just test` (offline) passes. Anything that needs the network is mocked or gated behind `skip_if_no_integration()`.
 - [ ] **Docs**: ran `just document`; `man/` and `NAMESPACE` are regenerated and committed (never hand-edited).
 - [ ] **NEWS**: added a user-facing bullet to `NEWS.md` ending with the PR number. (Skip for CI/internal-only changes.)
-- [ ] **Version**: bumped `Version:` (`z`) and `Date:` in `DESCRIPTION`. (Skip for build-excluded changes.)
+- [ ] **Style**: R code formatted with Air (`just format`) and follows CONTRIBUTING.md "Style" (`|>` chains, `pkg::` prefixes).
+- [ ] **Version**: bumped `Version:` (`z`) in `DESCRIPTION`. (Skip for build-excluded changes.)
 - [ ] **Checks**: `just check` and `just bioccheck` are clean, or the CI legs are green.
 - [ ] **ADR**: for a non-trivial design decision, added `adr/NNNN-*.md`.
 

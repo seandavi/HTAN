@@ -20,7 +20,3 @@
 #' @keywords internal
 #' @importFrom rlang .data
 "_PACKAGE"
-
-.onUnload <- function(libpath) {
-    htan_disconnect()
-}

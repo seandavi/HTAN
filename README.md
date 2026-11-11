@@ -48,15 +48,22 @@ BiocManager::install("HTAN")
 
 ```r
 library(HTAN)
-library(dplyr)
 
 con <- htan_con("r7")                  # ~20 MB from Hugging Face, once; then cached
-htan_files() |> count(access)          # 221,688 files by where you can get them
-scrna <- htan_files(assay == "ScRNA-seq", level == 4)
-scrna |> count(HTAN_Center, sort = TRUE)
-htan_lineage(head(scrna, 1)) |> collect()   # back to raw files and biospecimens
-img <- htan_files(access == "open-gc", File_Size < 1e6) |> head(1)
+htan_files() |> dplyr::count(access)   # 221,688 files by where you can get them
+scrna <- htan_files() |>
+    dplyr::filter(assay == "ScRNA-seq", level == 4)
+scrna |> dplyr::count(HTAN_Center, sort = TRUE)
+htan_lineage(head(scrna, 1)) |> dplyr::collect()  # back to raw files and biospecimens
+img <- htan_files() |>
+    dplyr::filter(access == "open-gc", File_Size < 1e6) |>
+    head(1)
 dl <- htan_download(img)               # anonymous, no account; cached
+
+## a participant's files, including files pooled from several participants
+mine <- htan_file_participants() |>
+    dplyr::filter(HTAN_Participant_ID == "HTA12_251")
+htan_files() |> dplyr::semi_join(mine, by = "HTAN_Data_File_ID")
 ```
 
 Every query returns a lazy table. You filter, join and count it with dplyr,

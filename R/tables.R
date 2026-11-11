@@ -22,9 +22,11 @@
 #'
 #' @export
 htan_tables <- function(con = htan_con()) {
-    tibble::as_tibble(DBI::dbGetQuery(con,
+    tibble::as_tibble(DBI::dbGetQuery(
+        con,
         "SELECT name, category, rows, source, source_version
-        FROM htan_meta.tables ORDER BY name"))
+        FROM htan_meta.tables ORDER BY name"
+    ))
 }
 
 #' @rdname htan_tables
@@ -38,11 +40,15 @@ htan_tbl <- function(name, con = htan_con()) {
 #' @param table `character()` or `NULL`. Restrict to these tables.
 #' @export
 htan_columns <- function(table = NULL, con = htan_con()) {
-    cols <- tibble::as_tibble(DBI::dbGetQuery(con,
+    cols <- tibble::as_tibble(DBI::dbGetQuery(
+        con,
         "SELECT \"table\", \"column\", type, description
-        FROM htan_meta.columns"))
+        FROM htan_meta.columns"
+    ))
     if (!is.null(table)) {
-        for (t in table) .check_table(t, con)
+        for (t in table) {
+            .check_table(t, con)
+        }
         cols <- cols[cols$table %in% table, ]
     }
     cols
@@ -61,9 +67,10 @@ htan_columns <- function(table = NULL, con = htan_con()) {
             c(
                 sprintf("No table named '%s' in this snapshot.", name),
                 i = if (length(near)) {
-                    sprintf("Did you mean %s?",
-                        paste0("'", utils::head(near, 3L), "'",
-                            collapse = ", "))
+                    sprintf(
+                        "Did you mean %s?",
+                        paste0("'", utils::head(near, 3L), "'", collapse = ", ")
+                    )
                 },
                 i = "See htan_tables() for the full list."
             ),

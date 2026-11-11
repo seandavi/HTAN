@@ -31,3 +31,6 @@
 ^\.git$
 ^\.env$
 ^.*\.BiocCheck$
+^air\.toml$
+^\.githooks$
+^dev$

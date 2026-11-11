@@ -28,8 +28,13 @@
 #' @examples
 #' fixture <- system.file("extdata", "snapshot", package = "HTAN")
 #' con <- htan_con("r7", base_url = fixture)
-#' f <- dplyr::pull(htan_files(level == 4, participants = "HTA12_251",
-#'     con = con), HTAN_Data_File_ID)[1]
+#' hta12_251 <- htan_file_participants(con) |>
+#'     dplyr::filter(HTAN_Participant_ID == "HTA12_251")
+#' f <- htan_files(con) |>
+#'     dplyr::filter(level == 4) |>
+#'     dplyr::semi_join(hta12_251, by = "HTAN_Data_File_ID") |>
+#'     utils::head(1L) |>
+#'     dplyr::pull(HTAN_Data_File_ID)
 #' se <- SummarizedExperiment::SummarizedExperiment(
 #'     list(counts = matrix(1:6, 2, dimnames = list(c("g1", "g2"),
 #'         c("c1", "c2", "c3")))))
@@ -60,13 +65,18 @@ htan_experiment <- function(x, participant_col = NULL, con = htan_con()) {
 }
 
 .check_experiments <- function(x) {
-    ok <- is.list(x) && length(x) && !is.null(names(x)) &&
-        all(nzchar(names(x))) && !anyDuplicated(names(x)) &&
+    ok <- is.list(x) &&
+        length(x) &&
+        !is.null(names(x)) &&
+        all(nzchar(names(x))) &&
+        !anyDuplicated(names(x)) &&
         all(vapply(x, methods::is, logical(1), "SummarizedExperiment"))
     if (!ok) {
         rlang::abort(
-            c("`x` must be a uniquely named list of SummarizedExperiments.",
-                i = "Names are the HTAN_Data_File_IDs the objects came from."),
+            c(
+                "`x` must be a uniquely named list of SummarizedExperiments.",
+                i = "Names are the HTAN_Data_File_IDs the objects came from."
+            ),
             class = c("htan_error_bad_argument", "htan_error")
         )
     }
@@ -74,16 +84,16 @@ htan_experiment <- function(x, participant_col = NULL, con = htan_con()) {
 }
 
 .file_participants <- function(ids, con) {
-    prov <- dplyr::collect(dplyr::distinct(dplyr::select(dplyr::filter(
-        htan_tbl("id_provenance", con),
-        .data$HTAN_Data_File_ID %in% !!ids,
-        !is.na(.data$HTAN_Participant_ID)),
-        "HTAN_Data_File_ID", "HTAN_Participant_ID")))
+    prov <- htan_file_participants(con) |>
+        dplyr::filter(.data$HTAN_Data_File_ID %in% !!ids) |>
+        dplyr::collect()
     unknown <- setdiff(ids, prov$HTAN_Data_File_ID)
     if (length(unknown)) {
         rlang::abort(
-            c("No participants recorded for these files in id_provenance.",
-                x = .some(unknown)),
+            c(
+                "No participants recorded for these files in id_provenance.",
+                x = .some(unknown)
+            ),
             class = c("htan_error_unknown_file", "htan_error")
         )
     }
@@ -98,8 +108,10 @@ htan_experiment <- function(x, participant_col = NULL, con = htan_con()) {
 .sample_map <- function(id, obj, owners, participant_col) {
     cols <- colnames(obj)
     if (is.null(cols)) {
-        rlang::abort(sprintf("Experiment %s has no colnames.", id),
-            class = c("htan_error_bad_argument", "htan_error"))
+        rlang::abort(
+            sprintf("Experiment %s has no colnames.", id),
+            class = c("htan_error_bad_argument", "htan_error")
+        )
     }
     if (length(owners) == 1L) {
         primary <- rep(owners, length(cols))
@@ -107,12 +119,19 @@ htan_experiment <- function(x, participant_col = NULL, con = htan_con()) {
         cd <- SummarizedExperiment::colData(obj)
         if (is.null(participant_col) || !participant_col %in% names(cd)) {
             rlang::abort(
-                c(sprintf("%s comes from %d participants.", id,
-                    length(owners)),
-                    i = paste("Pass `participant_col`, the colData column",
+                c(
+                    sprintf(
+                        "%s comes from %d participants.",
+                        id,
+                        length(owners)
+                    ),
+                    i = paste(
+                        "Pass `participant_col`, the colData column",
                         "holding each column's participant or biospecimen",
-                        "ID."),
-                    i = sprintf("Participants: %s", .some(owners))),
+                        "ID."
+                    ),
+                    i = sprintf("Participants: %s", .some(owners))
+                ),
                 class = c("htan_error_ambiguous_participant", "htan_error")
             )
         }
@@ -120,10 +139,16 @@ htan_experiment <- function(x, participant_col = NULL, con = htan_con()) {
         bad <- !primary %in% owners
         if (any(bad)) {
             rlang::abort(
-                c(sprintf("`%s` has values that are not participants of %s.",
-                    participant_col, id),
+                c(
+                    sprintf(
+                        "`%s` has values that are not participants of %s.",
+                        participant_col,
+                        id
+                    ),
                     x = .some(unique(as.character(
-                        cd[[participant_col]][bad])))),
+                        cd[[participant_col]][bad]
+                    )))
+                ),
                 class = c("htan_error_ambiguous_participant", "htan_error")
             )
         }
@@ -132,27 +157,40 @@ htan_experiment <- function(x, participant_col = NULL, con = htan_con()) {
 }
 
 ## Columns that describe the submission, not the participant.
-.admin_columns <- c("Component", "entityId", "Id", "Manifest_Id",
-    "Manifest_Version", "HTAN_Center")
+.admin_columns <- c(
+    "Component",
+    "entityId",
+    "Id",
+    "Manifest_Id",
+    "Manifest_Version",
+    "HTAN_Center"
+)
 
 .participant_coldata <- function(participants, con) {
+    ## One row per participant: the first by ID order, as recorded.
     first_row <- function(name) {
-        tbl <- dplyr::collect(dplyr::filter(htan_tbl(name, con),
-            .data$HTAN_Participant_ID %in% !!participants))
-        tbl <- tbl[order(tbl$HTAN_Participant_ID), , drop = FALSE]
-        tbl[!duplicated(tbl$HTAN_Participant_ID), , drop = FALSE]
+        htan_tbl(name, con) |>
+            dplyr::filter(.data$HTAN_Participant_ID %in% !!participants) |>
+            dplyr::collect() |>
+            dplyr::arrange(.data$HTAN_Participant_ID) |>
+            dplyr::distinct(.data$HTAN_Participant_ID, .keep_all = TRUE)
     }
-    demo <- first_row("clinical_tier1_demographics")
-    keep <- setdiff(names(demo), setdiff(.admin_columns, "HTAN_Center"))
-    demo <- demo[keep]
-    dx <- first_row("clinical_tier1_diagnosis")
-    dx <- dx[setdiff(names(dx), .admin_columns)]
-    dup <- setdiff(intersect(names(dx), names(demo)), "HTAN_Participant_ID")
-    names(dx)[match(dup, names(dx))] <- paste0("diagnosis_", dup)
-    cd <- merge(data.frame(HTAN_Participant_ID = participants), demo,
-        by = "HTAN_Participant_ID", all.x = TRUE)
-    cd <- merge(cd, dx, by = "HTAN_Participant_ID", all.x = TRUE)
-    cd <- cd[match(participants, cd$HTAN_Participant_ID), , drop = FALSE]
-    rownames(cd) <- cd$HTAN_Participant_ID
-    S4Vectors::DataFrame(cd, check.names = FALSE)
+    demo <- first_row("clinical_tier1_demographics") |>
+        dplyr::select(!dplyr::any_of(setdiff(.admin_columns, "HTAN_Center")))
+    ## Diagnosis columns that clash with demographics get a prefix.
+    dx <- first_row("clinical_tier1_diagnosis") |>
+        dplyr::select(!dplyr::any_of(.admin_columns)) |>
+        dplyr::rename_with(
+            function(x) sprintf("diagnosis_%s", x),
+            dplyr::any_of(setdiff(names(demo), "HTAN_Participant_ID"))
+        )
+    cd <- data.frame(HTAN_Participant_ID = participants) |>
+        dplyr::left_join(demo, by = "HTAN_Participant_ID") |>
+        dplyr::left_join(dx, by = "HTAN_Participant_ID") |>
+        as.data.frame()
+    S4Vectors::DataFrame(
+        cd,
+        row.names = cd$HTAN_Participant_ID,
+        check.names = FALSE
+    )
 }

@@ -1,0 +1,6 @@
+# Air (https://posit-dev.github.io/air/) formats the package's R code.
+# Bioconductor style: 4-space indent, lines under 80 characters.
+[format]
+line-width = 80
+indent-width = 4
+indent-style = "space"

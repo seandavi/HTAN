@@ -2,9 +2,11 @@
 
 export(htan_columns)
 export(htan_con)
+export(htan_default_base_url)
 export(htan_disconnect)
 export(htan_download)
 export(htan_experiment)
+export(htan_file_participants)
 export(htan_files)
 export(htan_lineage)
 export(htan_snapshot_info)
