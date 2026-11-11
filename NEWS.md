@@ -13,6 +13,10 @@
   `participants` argument and, unlike `==` on the comma-separated
   `HTAN_Participant_ID` column, finds files pooled from several
   participants. `htan_files()` stays one row per file (#45).
+* `read_htan()` no longer fails with "no method or default for coercing
+  SingleCellExperiment to SpatialExperiment" when reading a spatial
+  `.h5ad` or Seurat object in a session where SpatialExperiment is not
+  yet loaded (#49).
 * The atlas-overview vignette no longer counts files without a recorded
   participant as one extra participant: Release 7 has 2,415 participants
   with released files, not 2,416 (#45).

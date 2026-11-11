@@ -449,9 +449,15 @@ read_htan <- function(x, coords = NULL, ...) {
     ]
     colnames(xy) <- c("x", "y")
     SingleCellExperiment::reducedDim(sce, hit[1L]) <- NULL
-    spe <- methods::as(sce, "SpatialExperiment")
-    SpatialExperiment::spatialCoords(spe) <- xy
-    spe
+    .as_spatial(sce, xy)
+}
+
+## SingleCellExperiment -> SpatialExperiment. Not methods::as(): its
+## coercion method is defined by SpatialExperiment, which (in Imports) is
+## only loaded on first use, so as() fails in a session that has not
+## loaded it yet. The namespaced call loads it.
+.as_spatial <- function(sce, xy) {
+    SpatialExperiment::toSpatialExperiment(sce, spatialCoords = xy)
 }
 
 .load_one <- function(path) {
@@ -531,9 +537,7 @@ read_htan <- function(x, coords = NULL, ...) {
     }
     xy <- as.matrix(xy[colnames(sce), seq_len(2L)])
     colnames(xy) <- c("x", "y")
-    spe <- methods::as(sce, "SpatialExperiment")
-    SpatialExperiment::spatialCoords(spe) <- xy
-    spe
+    .as_spatial(sce, xy)
 }
 
 ## ---- spatial -------------------------------------------------------------

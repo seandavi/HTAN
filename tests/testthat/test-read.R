@@ -292,3 +292,34 @@ test_that("10x .h5 and Visium outs/ use TENxIO and VisiumIO", {
         class = "htan_error_unsupported_format"
     )
 })
+
+test_that("spatial conversion works without SpatialExperiment loaded", {
+    ## methods::as() needs SpatialExperiment's namespace already loaded,
+    ## which this test session has; check in a fresh R process. That needs
+    ## the package under test installed, so run only under R CMD check.
+    skip_if(
+        !nzchar(Sys.getenv("_R_CHECK_PACKAGE_NAME_")),
+        "runs under R CMD check"
+    )
+    script <- withr::local_tempfile(fileext = ".R")
+    writeLines(
+        c(
+            "cells <- c('a', 'b', 'c')",
+            "sce <- SingleCellExperiment::SingleCellExperiment(",
+            "    list(counts = matrix(1:6, 2, dimnames = list(NULL, cells)))",
+            ")",
+            "SingleCellExperiment::reducedDim(sce, 'spatial') <-",
+            "    matrix(1:6, 3, dimnames = list(cells, NULL))",
+            "stopifnot(!'SpatialExperiment' %in% loadedNamespaces())",
+            "cat(class(HTAN:::.spatial_from_reduced_dim(sce)))"
+        ),
+        script
+    )
+    out <- system2(
+        file.path(R.home("bin"), "Rscript"),
+        c("--vanilla", script),
+        stdout = TRUE,
+        stderr = TRUE
+    )
+    expect_identical(tail(out, 1L), "SpatialExperiment")
+})
