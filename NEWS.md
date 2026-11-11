@@ -13,6 +13,14 @@
   `participants` argument and, unlike `==` on the comma-separated
   `HTAN_Participant_ID` column, finds files pooled from several
   participants. `htan_files()` stays one row per file (#45).
+* The atlas-overview vignette no longer counts files without a recorded
+  participant as one extra participant: Release 7 has 2,415 participants
+  with released files, not 2,416 (#45).
+* Vignettes call every non-HTAN function with its namespace
+  (`dplyr::filter()`, `SummarizedExperiment::colData()`) and attach only
+  HTAN, so attach order no longer matters. The package's code style
+  (Air formatting, `|>` pipelines, `pkg::` prefixes) is documented in
+  CONTRIBUTING.md (#48).
 
 # HTAN 0.99.1
 
