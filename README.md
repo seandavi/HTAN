@@ -133,8 +133,7 @@ HTAN Level 4 files ([#8](https://github.com/seandavi/HTAN/issues/8)).
 
 ## How this package was written
 
-An AI coding agent, [Claude Code](https://claude.com/claude-code)
-(Anthropic), wrote almost all of the code, tests, documentation and
+An AI coding agent, [pi-agent](https://pi.dev/), wrote almost all of the code, tests, documentation and
 vignettes, working from the maintainer's design and under the maintainer's
 direction and review. The maintainer set the architecture (recorded in
 [`adr/`](adr/)), chose the data sources and the scope, reviewed the work,
@@ -160,8 +159,7 @@ If you use the package, please cite it and the HTAN consortium paper;
 
 ## Getting help and contributing
 
-Ask usage questions on the [Bioconductor support
-site](https://support.bioconductor.org/) with the tag `htan`, and report bugs
+Ask usage questions and report bugs
 in the [issue tracker](https://github.com/seandavi/HTAN/issues). Contributions
 are welcome: [CONTRIBUTING.md](CONTRIBUTING.md) covers the development setup,
 the tests and the snapshot builder. Please follow the [code of
